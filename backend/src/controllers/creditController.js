@@ -72,13 +72,13 @@ export async function amortissementPdf(req, res, next) {
     pdf.pipe(res);
     pdf.fontSize(16).text("Tableau d'amortissement STB", { underline: true });
     pdf.moveDown();
-    pdf.fontSize(10).text(`Capital : ${doc.amount} € — Durée : ${doc.durationMonths} mois — Taux : ${doc.annualRatePercent}%`);
-    pdf.text(`Mensualité constante : ${monthlyPayment.toFixed(2)} €`);
+    pdf.fontSize(10).text(`Capital : ${doc.amount} TND — Durée : ${doc.durationMonths} mois — Taux : ${doc.annualRatePercent}%`);
+    pdf.text(`Mensualité constante : ${monthlyPayment.toFixed(3)} TND`);
     pdf.moveDown();
     pdf.fontSize(9);
     rows.slice(0, 120).forEach((row) => {
       pdf.text(
-        `Mois ${row.month} | Mens. ${row.payment.toFixed(2)} | Int. ${row.interest.toFixed(2)} | Cap. ${row.principal.toFixed(2)} | Reste ${row.balance.toFixed(2)}`
+        `Mois ${row.month} | Mens. ${row.payment.toFixed(3)} TND | Int. ${row.interest.toFixed(3)} | Cap. ${row.principal.toFixed(3)} | Reste ${row.balance.toFixed(3)}`
       );
     });
     if (rows.length > 120) pdf.text(`… ${rows.length - 120} lignes supplémentaires (extrait)`);
@@ -159,7 +159,7 @@ export async function getOne(req, res, next) {
 export async function transition(req, res, next) {
   try {
     const { nextStatus } = req.body;
-    const comment = assertComment(req);
+    const comment = assertComment(req.body);
     const doc = await CreditRequest.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: "Dossier introuvable" });
     if (req.userRole === ROLES.CLIENT && doc.applicantId.toString() !== req.userId) {

@@ -12,13 +12,15 @@ import { DossiersPage } from './pages/DossiersPage'
 import { CreditDetailPage } from './pages/CreditDetailPage'
 import { AdminPage } from './pages/AdminPage'
 import { AssistantPage } from './pages/AssistantPage'
+import { HomePage } from './pages/HomePage'
+import { AccountPage } from './pages/AccountPage'
 
 export default function App() {
   return (
     <>
       <Routes>
         <Route path="/" element={<Layout />}>
-          <Route index element={<Navigate to="/simulation" replace />} />
+          <Route index element={<HomePage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
           <Route path="simulation" element={<SimulationPage />} />
@@ -28,6 +30,14 @@ export default function App() {
             element={
               <RequireAuth>
                 <DashboardPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="compte"
+            element={
+              <RequireAuth>
+                <AccountPage />
               </RequireAuth>
             }
           />
@@ -67,7 +77,7 @@ export default function App() {
               </RequireAuth>
             }
           />
-          <Route path="*" element={<Navigate to="/simulation" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
       <Chatbot />

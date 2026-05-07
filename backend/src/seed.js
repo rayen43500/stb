@@ -12,6 +12,13 @@ const demoUsers = [
     lastName: "STB",
   },
   {
+    email: "admin.test.2026@stb.local",
+    password: "AdminTest!8nQ4",
+    role: ROLES.ADMIN,
+    firstName: "Test",
+    lastName: "Admin",
+  },
+  {
     email: "client@stb.local",
     password: "ClientSTB!2026",
     role: ROLES.CLIENT,
@@ -68,7 +75,7 @@ async function run() {
     console.log("Créé:", u.email, u.role);
   }
 
-  console.log("Seed terminé. Comptes : admin@stb.local, client@stb.local, agent@stb.local, chef@stb.local, comite@stb.local");
+  console.log("Seed terminé. Comptes : admin@stb.local, admin.test.2026@stb.local, client@stb.local, agent@stb.local, chef@stb.local, comite@stb.local");
   await mongoose.disconnect();
 }
 

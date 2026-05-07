@@ -40,18 +40,18 @@ export function AdminPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="stb-page space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Administration</h1>
-        <p className="text-slate-400">Gestion des rôles et lien vers les journaux d&apos;audit (API).</p>
+        <h1 className="stb-h1">Administration</h1>
+        <p className="stb-lead">Gestion des rôles et lien vers les journaux d&apos;audit (API).</p>
       </div>
-      {error && <p className="text-red-400">{error}</p>}
+      {error && <p className="text-red-600">{error}</p>}
 
-      <section className="rounded-xl border border-slate-700 bg-slate-900/50 p-6">
-        <h2 className="text-lg font-medium text-white">Utilisateurs</h2>
+      <section className="stb-card">
+        <h2 className="text-lg font-medium text-slate-900">Utilisateurs</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-left text-sm">
-            <thead className="text-slate-400">
+            <thead className="text-slate-500">
               <tr>
                 <th className="px-3 py-2">Email</th>
                 <th className="px-3 py-2">Nom</th>
@@ -60,14 +60,14 @@ export function AdminPage() {
             </thead>
             <tbody>
               {users.map((u) => (
-                <tr key={u._id} className="border-t border-slate-800">
+                <tr key={u._id} className="border-t border-slate-200">
                   <td className="px-3 py-2">{u.email}</td>
                   <td className="px-3 py-2">
                     {u.firstName} {u.lastName}
                   </td>
                   <td className="px-3 py-2">
                     <select
-                      className="rounded border border-slate-600 bg-slate-950 px-2 py-1 text-white"
+                      className="rounded border border-slate-300 bg-white px-2 py-1 text-slate-700"
                       value={u.role}
                       onChange={(e) => changeRole(u._id, e.target.value as Role)}
                     >
@@ -85,13 +85,13 @@ export function AdminPage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-amber-900/40 bg-amber-950/20 p-6 text-sm text-amber-100">
+      <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
         <h2 className="text-lg font-medium">Audit</h2>
-        <p className="mt-2 text-amber-200/80">
-          Les entrées d&apos;audit sont exposées via <code className="rounded bg-black/30 px-1">GET /api/audit</code>{' '}
+        <p className="mt-2 text-amber-700">
+          Les entrées d&apos;audit sont exposées via <code className="rounded bg-amber-100 px-1">GET /api/audit</code>{' '}
           (GET avec jeton admin). Utilisez Postman ou un client HTTP pour consulter les journaux détaillés.
         </p>
-        <Link to="/dossiers" className="mt-4 inline-block text-blue-400 hover:underline">
+        <Link to="/dossiers" className="mt-4 inline-block text-blue-700 hover:underline">
           Retour dossiers
         </Link>
       </section>

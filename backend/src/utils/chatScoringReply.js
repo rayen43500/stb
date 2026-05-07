@@ -12,7 +12,7 @@ export function buildChatScoringReply(scoring, sim, { amount, durationMonths }) 
   const lines = [];
   lines.push(`${tone}`);
   lines.push(
-    `Pour un financement d'environ ${amount} € sur ${durationMonths} mois, la mensualité indicative est de ${sim.monthlyPayment.toFixed(2)} €.`
+    `Pour un financement d'environ ${amount} TND sur ${durationMonths} mois, la mensualité indicative est de ${sim.monthlyPayment.toFixed(3)} TND.`
   );
   if (ratio != null) {
     lines.push(

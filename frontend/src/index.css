@@ -2,8 +2,12 @@
 
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --color-stb-accent: #3b82f6;
-  --color-stb-accent-soft: #60a5fa;
+  --color-stb-primary: #1d4ed8;
+  --color-stb-primary-deep: #1e3a8a;
+  --color-stb-accent: #06b6d4;
+  --color-stb-success: #10b981;
+  --color-stb-warning: #f59e0b;
+  --color-stb-danger: #ef4444;
 }
 
 @layer base {
@@ -11,7 +15,7 @@
     @apply antialiased;
   }
   body {
-    @apply min-h-screen bg-slate-950 text-slate-100;
+    @apply min-h-screen bg-slate-50 text-slate-900;
     font-family: var(--font-sans);
   }
 }
@@ -19,32 +23,44 @@
 @layer components {
   .stb-page {
     @apply mx-auto max-w-6xl px-4 py-6 sm:py-8;
+    animation: stb-fade-up 600ms ease-out both;
   }
   .stb-card {
-    @apply rounded-2xl border border-slate-700/70 bg-slate-900/55 p-6 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.55)] backdrop-blur-md;
+    @apply rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_24px_70px_-24px_rgba(15,23,42,0.25)];
   }
   .stb-card-muted {
-    @apply rounded-2xl border border-slate-800/80 bg-slate-950/40 p-6;
+    @apply rounded-2xl border border-slate-200 bg-slate-50/80 p-6;
   }
   .stb-h1 {
-    @apply text-2xl font-semibold tracking-tight text-white sm:text-3xl;
+    @apply text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl;
   }
   .stb-lead {
-    @apply mt-1 text-sm leading-relaxed text-slate-400;
+    @apply mt-1 text-sm leading-relaxed text-slate-600;
   }
   .stb-label {
     @apply block text-xs font-medium uppercase tracking-wide text-slate-500;
   }
   .stb-input {
-    @apply mt-1.5 w-full rounded-xl border border-slate-600/70 bg-slate-950/80 px-3.5 py-2.5 text-[15px] text-white outline-none transition placeholder:text-slate-600 focus:border-blue-500/70 focus:ring-2 focus:ring-blue-500/25;
+    @apply mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-[15px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600/70 focus:ring-2 focus:ring-blue-500/20;
   }
   .stb-btn-primary {
-    @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-950/40 transition hover:from-blue-500 hover:to-blue-400 disabled:pointer-events-none disabled:opacity-45;
+    @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-200/70 transition hover:from-blue-600 hover:to-blue-500 disabled:pointer-events-none disabled:opacity-45;
   }
   .stb-btn-secondary {
-    @apply inline-flex items-center justify-center rounded-xl border border-slate-600/80 bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-100 transition hover:border-slate-500 hover:bg-slate-800;
+    @apply inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50;
   }
   .stb-link {
-    @apply font-medium text-blue-400 underline-offset-2 hover:text-blue-300 hover:underline;
+    @apply font-medium text-blue-700 underline-offset-2 hover:text-blue-600 hover:underline;
+  }
+}
+
+@keyframes stb-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

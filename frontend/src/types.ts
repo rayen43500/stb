@@ -12,6 +12,13 @@ export type SafeUser = {
   firstName?: string
   lastName?: string
   phone?: string
+  addressLine1?: string
+  addressLine2?: string
+  city?: string
+  postalCode?: string
+  country?: string
+  hasAvatar?: boolean
+  updatedAt?: string
   clientProfile?: {
     monthlyIncome?: number
     monthlyCharges?: number

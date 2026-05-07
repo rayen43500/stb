@@ -38,12 +38,12 @@ export function DemandePage() {
       <div className="stb-card">
         <h1 className="stb-h1">Nouvelle demande</h1>
         <p className="stb-lead">
-          Crée un dossier en statut <strong className="text-slate-300">BROUILLON</strong>. Complétez ensuite la fiche
+          Crée un dossier en statut <strong className="text-slate-700">BROUILLON</strong>. Complétez ensuite la fiche
           pour soumission.
         </p>
         <form className="mt-8 space-y-5" onSubmit={submit}>
           <div>
-            <label className="stb-label">Montant (€)</label>
+            <label className="stb-label">Montant (TND)</label>
             <input
               type="number"
               required
@@ -73,13 +73,13 @@ export function DemandePage() {
               onChange={(e) => setAnnualRatePercent(Number(e.target.value))}
             />
           </div>
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-red-600">{error}</p>}
           <button type="submit" disabled={loading} className="stb-btn-primary w-full py-3">
             {loading ? 'Création…' : 'Créer le brouillon'}
           </button>
         </form>
         {createdId && (
-          <div className="mt-8 rounded-xl border border-emerald-500/30 bg-emerald-950/35 p-4 text-sm text-emerald-100">
+          <div className="mt-8 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
             Dossier créé.{' '}
             <Link className="stb-link font-semibold" to={`/dossiers/${createdId}`}>
               Ouvrir le dossier →

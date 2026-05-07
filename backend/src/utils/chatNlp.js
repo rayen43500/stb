@@ -19,13 +19,15 @@ export function parseCreditEntities(text) {
     out.amount = Number(kMatch[1]) * 1000;
   }
 
-  const creditAmount = t.match(/(?:crédit|credit|prêt|pret|emprunt)\s*(?:de\s*)?(\d[\d\s]*)\s*(?:€|eur|euros)?/i);
+  const creditAmount = t.match(
+    /(?:crédit|credit|prêt|pret|emprunt)\s*(?:de\s*)?(\d[\d\s]*)\s*(?:€|eur|euros|tnd|dt|dinars?)?/i
+  );
   if (creditAmount && !out.amount) {
     out.amount = parseInt(creditAmount[1].replace(/\s/g, ""), 10);
   }
 
   if (!out.amount) {
-    const euroMatch = t.match(/\b(\d[\d\s]{4,})\s*(?:€|eur|euros)\b/i);
+    const euroMatch = t.match(/\b(\d[\d\s]{4,})\s*(?:€|eur|euros|tnd|dt|dinars?)\b/i);
     if (euroMatch) out.amount = parseInt(euroMatch[1].replace(/\s/g, ""), 10);
   }
 
@@ -43,10 +45,10 @@ export function parseCreditEntities(text) {
   const rate = t.match(/(\d+[.,]\d+)\s*%/);
   if (rate) out.annualRatePercent = parseFloat(rate[1].replace(",", "."));
 
-  const rev = t.match(/(?:revenus?|salaire)\s*(?:de\s*)?(\d[\d\s]*)\s*(?:€|eur)?/i);
+  const rev = t.match(/(?:revenus?|salaire)\s*(?:de\s*)?(\d[\d\s]*)\s*(?:€|eur|tnd|dt|dinars?)?/i);
   if (rev) out.monthlyIncome = parseInt(rev[1].replace(/\s/g, ""), 10);
 
-  const chg = t.match(/(?:charges)\s*(?:de\s*)?(\d[\d\s]*)\s*(?:€|eur)?/i);
+  const chg = t.match(/(?:charges)\s*(?:de\s*)?(\d[\d\s]*)\s*(?:€|eur|tnd|dt|dinars?)?/i);
   if (chg) out.monthlyCharges = parseInt(chg[1].replace(/\s/g, ""), 10);
 
   return out;

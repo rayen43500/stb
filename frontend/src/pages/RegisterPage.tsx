@@ -68,7 +68,7 @@ export function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-red-600">{error}</p>}
           <button type="submit" disabled={loading} className="stb-btn-primary w-full py-3">
             {loading ? 'Création…' : 'Créer mon compte'}
           </button>

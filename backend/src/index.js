@@ -13,6 +13,7 @@ import auditRoutes from "./routes/auditRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import profileRoutes from "./routes/profileRoutes.js";
 import { ensureUploadDirs } from "./middleware/upload.js";
 
 const app = express();
@@ -30,6 +31,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/profile", profileRoutes);
 app.use("/api/credits", creditRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/stats", statsRoutes);

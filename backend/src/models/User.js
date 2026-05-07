@@ -21,6 +21,12 @@ const userSchema = new mongoose.Schema(
     firstName: { type: String, trim: true },
     lastName: { type: String, trim: true },
     phone: { type: String, trim: true },
+    addressLine1: { type: String, trim: true },
+    addressLine2: { type: String, trim: true },
+    city: { type: String, trim: true },
+    postalCode: { type: String, trim: true },
+    country: { type: String, trim: true, default: "Tunisie" },
+    profileAvatarName: { type: String, trim: true },
     clientProfile: {
       monthlyIncome: Number,
       monthlyCharges: Number,
@@ -45,6 +51,13 @@ userSchema.methods.toSafeJSON = function toSafeJSON() {
     firstName: this.firstName,
     lastName: this.lastName,
     phone: this.phone,
+    addressLine1: this.addressLine1,
+    addressLine2: this.addressLine2,
+    city: this.city,
+    postalCode: this.postalCode,
+    country: this.country || "Tunisie",
+    hasAvatar: Boolean(this.profileAvatarName),
+    updatedAt: this.updatedAt ? this.updatedAt.toISOString() : undefined,
     clientProfile: this.clientProfile || undefined,
   };
 };

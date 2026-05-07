@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api } from '../lib/api'
+import { formatTnd } from '../lib/money'
 
 type SimResult = {
   monthlyPayment: number
@@ -21,10 +22,10 @@ function riskBadge(label: string) {
   const fr = riskFr(label)
   const cls =
     label === 'ACCEPTABLE'
-      ? 'bg-emerald-500/15 text-emerald-200 ring-emerald-500/30'
+      ? 'bg-emerald-50 text-emerald-800 ring-emerald-200'
       : label === 'MODERE'
-        ? 'bg-amber-500/15 text-amber-200 ring-amber-500/30'
-        : 'bg-red-500/15 text-red-200 ring-red-500/30'
+        ? 'bg-amber-50 text-amber-800 ring-amber-200'
+        : 'bg-red-50 text-red-800 ring-red-200'
   return (
     <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${cls}`}>{fr}</span>
   )
@@ -70,11 +71,11 @@ export function SimulationPage() {
       </div>
       <div className="grid gap-8 lg:grid-cols-2">
         <section className="stb-card">
-          <h2 className="text-lg font-semibold text-white">Paramètres</h2>
-          <p className="mt-1 text-sm text-slate-500">Tous les champs sont pris en compte pour l&apos;endettement.</p>
+          <h2 className="text-lg font-semibold text-slate-900">Paramètres</h2>
+          <p className="mt-1 text-sm text-slate-600">Tous les champs sont pris en compte pour l&apos;endettement.</p>
           <div className="mt-6 grid gap-5 sm:grid-cols-2">
             <label className="block">
-              <span className="stb-label">Montant (€)</span>
+              <span className="stb-label">Montant (TND)</span>
               <input
                 type="number"
                 className="stb-input"
@@ -102,7 +103,7 @@ export function SimulationPage() {
               />
             </label>
             <label className="block">
-              <span className="stb-label">Revenus mensuels nets (€)</span>
+              <span className="stb-label">Revenus mensuels nets (TND)</span>
               <input
                 type="number"
                 className="stb-input"
@@ -111,7 +112,7 @@ export function SimulationPage() {
               />
             </label>
             <label className="block sm:col-span-2">
-              <span className="stb-label">Charges mensuelles (€)</span>
+              <span className="stb-label">Charges mensuelles (TND)</span>
               <input
                 type="number"
                 className="stb-input"
@@ -123,34 +124,34 @@ export function SimulationPage() {
           <button type="button" onClick={run} disabled={loading} className="stb-btn-primary mt-8 w-full sm:w-auto">
             {loading ? 'Calcul en cours…' : 'Calculer'}
           </button>
-          {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+          {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
         </section>
 
-        <section className="stb-card border-blue-500/20 bg-gradient-to-b from-slate-900/80 to-slate-950/80">
-          <h2 className="text-lg font-semibold text-white">Résultats</h2>
+        <section className="stb-card border-blue-200 bg-gradient-to-b from-white to-slate-50">
+          <h2 className="text-lg font-semibold text-slate-900">Résultats</h2>
           {!sim && (
-            <p className="mt-6 text-sm leading-relaxed text-slate-500">
+            <p className="mt-6 text-sm leading-relaxed text-slate-600">
               Cliquez sur « Calculer » pour afficher la mensualité, les intérêts totaux et une première grille de risque
               liée à l&apos;endettement.
             </p>
           )}
           {sim && (
             <dl className="mt-6 space-y-4 text-sm">
-              <div className="flex items-center justify-between gap-4 border-b border-white/5 pb-4">
+              <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-4">
                 <dt className="text-slate-500">Mensualité</dt>
-                <dd className="text-lg font-semibold tabular-nums text-white">{sim.monthlyPayment.toFixed(2)} €</dd>
+                <dd className="text-lg font-semibold tabular-nums text-slate-900">{formatTnd(sim.monthlyPayment)}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-slate-500">Intérêts totaux</dt>
-                <dd className="tabular-nums text-slate-200">{sim.totalCostInterest.toFixed(2)} €</dd>
+                <dd className="tabular-nums text-slate-700">{formatTnd(sim.totalCostInterest)}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-slate-500">Total remboursé</dt>
-                <dd className="tabular-nums text-slate-200">{sim.totalRepaid.toFixed(2)} €</dd>
+                <dd className="tabular-nums text-slate-700">{formatTnd(sim.totalRepaid)}</dd>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <dt className="text-slate-500">Endettement après prêt</dt>
-                <dd className="tabular-nums text-slate-200">
+                <dd className="tabular-nums text-slate-700">
                   {sim.debtRatioPercent != null ? `${sim.debtRatioPercent} %` : 'N/A'}
                 </dd>
               </div>
@@ -159,9 +160,9 @@ export function SimulationPage() {
                 <dd>{riskBadge(sim.simulationRiskLabel)}</dd>
               </div>
               {sim.recommendations.length > 0 && (
-                <div className="rounded-xl bg-white/5 p-4 ring-1 ring-white/10">
+                <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
                   <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Recommandations</div>
-                  <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-slate-300">
+                  <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-slate-700">
                     {sim.recommendations.map((r) => (
                       <li key={r}>{r}</li>
                     ))}
