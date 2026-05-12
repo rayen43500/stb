@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+export const CREDIT_TYPES = ["CONSO", "IMMOBILIER", "VEHICULE", "AUTRE"];
+
 export const CREDIT_STATUSES = [
   "BROUILLON",
   "SOUMIS",
@@ -32,6 +34,14 @@ const creditRequestSchema = new mongoose.Schema(
     debtRatioPercent: Number,
     simulationRiskLabel: { type: String, enum: ["ACCEPTABLE", "MODERE", "ELEVE"] },
     recommendations: [String],
+    creditType: { type: String, enum: CREDIT_TYPES, default: "CONSO" },
+    /** Contrôle pièces par l'agent */
+    documentVerification: {
+      cin: { type: Boolean, default: false },
+      payslip: { type: Boolean, default: false },
+      contract: { type: Boolean, default: false },
+      bankStatement: { type: Boolean, default: false },
+    },
     status: { type: String, enum: CREDIT_STATUSES, default: "BROUILLON" },
     scoring: {
       score: Number,

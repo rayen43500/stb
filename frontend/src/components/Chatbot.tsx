@@ -8,7 +8,7 @@ export function Chatbot() {
     {
       from: 'bot',
       text:
-        'Bonjour. Je suis branché sur l’API STB. Essayez :\n« crédit de 20000 sur 5 ans revenus 3200 charges 900 »\npour enchaîner simulation + scoring (connectez-vous pour réutiliser votre profil).',
+        'Bonjour. Assistant branché sur l’API STB. Essayez :\n« crédit de 20000 sur 5 ans revenus 3200 charges 900 »\npour enchaîner simulation et grille d’analyse (connectez-vous pour réutiliser votre profil).',
     },
   ])
   const [input, setInput] = useState('')
@@ -28,7 +28,7 @@ export function Chatbot() {
       const data = await postChatMessage(userLine)
       let botText = data.reply
       if (data.meta?.scoring?.decision) {
-        botText += `\n\n───\nDécision indicative : ${data.meta.scoring.decision} · score ${data.meta.scoring.score ?? '—'}`
+        botText += `\n\n───\nOrientation indicative : ${data.meta.scoring.decision} · indicateur ${data.meta.scoring.score ?? '—'}/100`
       }
       setMessages((m) => [...m, { from: 'bot', text: botText }])
       setLastSuggestions(data.suggestions)
@@ -55,10 +55,10 @@ export function Chatbot() {
       <button
         type="button"
         className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-700 to-blue-600 text-2xl text-white shadow-[0_16px_40px_-12px_rgba(29,78,216,0.5)] ring-2 ring-blue-100 transition hover:scale-[1.03] hover:shadow-blue-400/50"
-        aria-label="Ouvrir l’assistant"
+        aria-label="Ouvrir l’assistant STB"
         onClick={() => setOpen((o) => !o)}
       >
-        🤖
+        <span className="text-xs font-bold tracking-tight">STB</span>
       </button>
       {open && (
         <div
@@ -69,7 +69,7 @@ export function Chatbot() {
           <div className="border-b border-slate-200 bg-gradient-to-r from-blue-50 to-cyan-50 px-4 py-3">
             <div className="font-semibold text-slate-900">Assistant STB</div>
             <div className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
-              Simulation · scoring · FAQ
+              Simulation · analyse · FAQ
             </div>
           </div>
           <div className="max-h-80 space-y-2.5 overflow-y-auto px-3 py-3 text-sm">
@@ -115,7 +115,7 @@ export function Chatbot() {
               onClick={() => void reply('crédit de 20000 sur 5 ans revenus 3200 charges 900')}
               disabled={pending}
             >
-              Exemple scoring
+              Exemple analyse
             </button>
             <Link
               to="/simulation"

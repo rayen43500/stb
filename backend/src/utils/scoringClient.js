@@ -12,6 +12,20 @@ export async function callScoringService(payload) {
   }
 }
 
+export async function callNlpParseService(text) {
+  try {
+    const { data } = await axios.post(
+      `${URL}/nlp/parse`,
+      { text: String(text || "") },
+      { timeout: 8000 }
+    );
+    return data;
+  } catch (err) {
+    console.warn("NLP service indisponible, repli sur parser local.", err.message);
+    return null;
+  }
+}
+
 function decisionFromScore(score) {
   if (score >= 80) {
     return {

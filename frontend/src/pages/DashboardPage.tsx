@@ -5,24 +5,48 @@ import {
   CategoryScale,
   LinearScale,
   BarElement,
+  ArcElement,
   Title,
   Tooltip,
   Legend,
 } from 'chart.js'
-import { Bar } from 'react-chartjs-2'
+import { Bar, Doughnut } from 'react-chartjs-2'
 import { api } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { roleLabelFr, roleMission } from '../lib/roleLabels'
 import { roleTransitionHints } from '../lib/roleWorkflowHints'
 import type { Role } from '../types'
+import { formatTnd } from '../lib/money'
+import { statusLabelFr } from '../lib/creditStatusStyle'
+import { creditTypeLabel } from '../lib/creditTypeLabels'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend)
 
-type Stats = {
-  totalCredits: number
-  totalUsers: number
-  byStatus: Record<string, number>
+type WorkspacePayload = {
+  role: Role
+  kpis: Record<string, number>
+  statusMap: Record<string, number>
+  byRisk: Record<string, number>
+  byCreditType: Record<string, number>
   acceptanceRate: number | null
+  recent: Array<{
+    _id: string
+    status: string
+    amount: number
+    creditType?: string
+    updatedAt: string
+    scoring?: { score?: number; category?: string }
+    applicantId?: { firstName?: string; lastName?: string; email?: string }
+  }>
+}
+
+type NotifRow = {
+  _id: string
+  title: string
+  message: string
+  read?: boolean
+  link?: string
+  createdAt?: string
 }
 
 const staffRoles: Role[] = ['ADMIN', 'AGENT_BANCAIRE', 'CHEF_AGENCE', 'COMITE_CREDIT']
@@ -57,7 +81,7 @@ function RoleHints({ role }: { role: Role }) {
   const hints: Record<Role, string[]> = {
     CLIENT: [
       'Créez un brouillon, ajoutez vos pièces puis soumettez pour lancer l’analyse.',
-      'Consultez le scoring et l’historique des commentaires sur chaque dossier.',
+      'Consultez l’analyse de risque et l’historique des commentaires sur chaque dossier.',
       'Complétez votre profil financier dans Compte & profil pour des simulations plus précises.',
     ],
     AGENT_BANCAIRE: [
@@ -91,28 +115,67 @@ function RoleHints({ role }: { role: Role }) {
 
 export function DashboardPage() {
   const { user } = useAuth()
-  const [stats, setStats] = useState<Stats | null>(null)
+  const [workspace, setWorkspace] = useState<WorkspacePayload | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  const [notifs, setNotifs] = useState<NotifRow[]>([])
+  const [notifsErr, setNotifsErr] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user || !staffRoles.includes(user.role)) return
     api
-      .get<Stats>('/stats/dashboard')
-      .then((r) => setStats(r.data))
-      .catch(() => setErr('Statistiques non disponibles'))
+      .get<WorkspacePayload>('/stats/workspace')
+      .then((r) => {
+        setWorkspace(r.data)
+        setErr(null)
+      })
+      .catch(() => setErr('Statistiques métier non disponibles'))
+  }, [user])
+
+  useEffect(() => {
+    if (!user || !staffRoles.includes(user.role)) return
+    api
+      .get<NotifRow[]>('/notifications')
+      .then((r) => setNotifs(r.data.slice(0, 8)))
+      .catch(() => setNotifsErr('Notifications non disponibles'))
   }, [user])
 
   const chartData =
-    stats &&
+    workspace &&
     {
-      labels: Object.keys(stats.byStatus),
+      labels: Object.keys(workspace.statusMap).map((s) => statusLabelFr(s)),
       datasets: [
         {
           label: 'Dossiers par statut',
-          data: Object.values(stats.byStatus),
+          data: Object.values(workspace.statusMap),
           backgroundColor: 'rgba(59, 130, 246, 0.6)',
           borderColor: 'rgba(59, 130, 246, 1)',
           borderWidth: 1,
+        },
+      ],
+    }
+
+  const riskChart =
+    workspace &&
+    Object.keys(workspace.byRisk).length > 0 && {
+      labels: Object.keys(workspace.byRisk),
+      datasets: [
+        {
+          data: Object.values(workspace.byRisk),
+          backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+          borderWidth: 0,
+        },
+      ],
+    }
+
+  const typeChart =
+    workspace &&
+    Object.keys(workspace.byCreditType).length > 0 && {
+      labels: Object.keys(workspace.byCreditType).map((k) => creditTypeLabel(k)),
+      datasets: [
+        {
+          data: Object.values(workspace.byCreditType),
+          backgroundColor: ['#1d4ed8', '#06b6d4', '#8b5cf6', '#64748b'],
+          borderWidth: 0,
         },
       ],
     }
@@ -212,8 +275,8 @@ export function DashboardPage() {
             className="stb-card-muted transition hover:border-cyan-400/40 hover:shadow-lg hover:shadow-cyan-200/40"
           >
             <div className="text-xs font-semibold uppercase tracking-wide text-cyan-800">Assistant</div>
-            <div className="mt-2 font-medium text-slate-900">FAQ & scoring conversationnel</div>
-            <p className="mt-1 text-sm text-slate-600">Questions métier et simulation guidée.</p>
+            <div className="mt-2 font-medium text-slate-900">FAQ & aide métier</div>
+            <p className="mt-1 text-sm text-slate-600">Questions fréquentes et simulation guidée.</p>
           </Link>
           {user.role === 'CLIENT' && (
             <>
@@ -269,43 +332,175 @@ export function DashboardPage() {
       </div>
 
       {staffRoles.includes(user.role) && (
-        <section className="stb-card">
-          <h2 className="text-lg font-medium text-slate-900">Indicateurs — vue {roleLabelFr[user.role]}</h2>
-          <p className="mt-1 text-sm text-slate-600">Synthèse des dossiers et utilisateurs (données agrégées).</p>
-          {err && <p className="mt-2 text-sm text-amber-600">{err}</p>}
-          {stats && (
+        <section className="stb-card space-y-8">
+          <div>
+            <h2 className="text-lg font-medium text-slate-900">Tableau de bord — {roleLabelFr[user.role]}</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Indicateurs métier, derniers dossiers et répartitions (niveau de risque, type de crédit).
+            </p>
+            {err && <p className="mt-2 text-sm text-amber-600">{err}</p>}
+          </div>
+
+          {workspace && (
             <>
-              <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                  <div className="text-xs text-slate-500">Dossiers</div>
-                  <div className="text-2xl font-semibold tabular-nums text-slate-900">{stats.totalCredits}</div>
-                </div>
-                <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                  <div className="text-xs text-slate-500">Utilisateurs</div>
-                  <div className="text-2xl font-semibold tabular-nums text-slate-900">{stats.totalUsers}</div>
-                </div>
-                <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                  <div className="text-xs text-slate-500">Taux acceptation (décisions)</div>
-                  <div className="text-2xl font-semibold tabular-nums text-slate-900">
-                    {stats.acceptanceRate != null ? `${stats.acceptanceRate} %` : '—'}
-                  </div>
-                </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {Object.entries(workspace.kpis).map(([key, val]) => {
+                  const label =
+                    {
+                      dossiersRecus: 'Dossiers reçus',
+                      dossiersEnAttente: 'En attente de traitement',
+                      dossiersEnvoyesScoring: 'En analyse risque',
+                      enAttente: 'En attente',
+                      enAttenteAgent: 'En attente',
+                      enAttenteTraitement: 'En attente traitement',
+                      envoyesScoring: 'En analyse risque',
+                      retournesClient: 'Retours client',
+                      attenteValidationChef: 'Attente validation chef',
+                      attenteDecisionFinale: 'Attente décision comité',
+                      attenteComite: 'Attente comité',
+                      dossiersApprouves: 'Approuvés',
+                      dossiersRefuses: 'Refusés',
+                      montantTotalAccorde: 'Montant total accordé',
+                    }[key] || key
+                  const isMoney = key.toLowerCase().includes('montant')
+                  return (
+                    <div key={key} className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
+                      <div className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">
+                        {isMoney ? formatTnd(Number(val)) : val}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
-              {chartData && (
-                <div className="mt-8 max-h-80">
-                  <Bar
-                    data={chartData}
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                <h3 className="text-sm font-semibold text-slate-800">Notifications</h3>
+                {notifsErr && <p className="mt-2 text-xs text-amber-700">{notifsErr}</p>}
+                {!notifsErr && notifs.length === 0 && (
+                  <p className="mt-2 text-sm text-slate-600">
+                    Aucune notification pour le moment. Les alertes liées au traitement des dossiers apparaîtront ici.
+                  </p>
+                )}
+                {notifs.length > 0 && (
+                  <ul className="mt-3 divide-y divide-slate-200">
+                    {notifs.map((n) => (
+                      <li key={n._id} className="py-2.5 first:pt-0">
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <span className="font-medium text-slate-900">{n.title}</span>
+                          {n.createdAt && (
+                            <span className="text-xs text-slate-500">
+                              {new Date(n.createdAt).toLocaleString('fr-TN', {
+                                dateStyle: 'short',
+                                timeStyle: 'short',
+                              })}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-sm text-slate-600">{n.message}</p>
+                        {n.link && (
+                          <Link
+                            to={n.link.startsWith('/') ? n.link : `/${n.link}`}
+                            className="mt-1 inline-block text-xs font-semibold text-blue-700 hover:underline"
+                          >
+                            Ouvrir
+                          </Link>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {workspace.acceptanceRate != null && (
+                <p className="text-sm text-slate-600">
+                  Taux d&apos;acceptation (sur dossiers décidés) :{' '}
+                  <strong className="text-slate-900">{workspace.acceptanceRate} %</strong>
+                </p>
+              )}
+
+              <div className="grid gap-8 lg:grid-cols-2">
+                {chartData && (
+                  <div className="max-h-72">
+                    <h3 className="mb-3 text-sm font-semibold text-slate-800">Dossiers par statut</h3>
+                    <Bar
+                      data={chartData}
+                      options={{
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                          x: { ticks: { color: '#64748b' }, grid: { color: '#e2e8f0' } },
+                          y: { ticks: { color: '#64748b' }, grid: { color: '#e2e8f0' } },
+                        },
+                      }}
+                    />
+                  </div>
+                )}
+                {riskChart && (
+                  <div className="max-h-72">
+                    <h3 className="mb-3 text-sm font-semibold text-slate-800">Répartition des niveaux de risque</h3>
+                    <Doughnut
+                      data={riskChart}
+                      options={{
+                        responsive: true,
+                        plugins: { legend: { position: 'bottom', labels: { color: '#475569' } } },
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {typeChart && (
+                <div className="max-h-64">
+                  <h3 className="mb-3 text-sm font-semibold text-slate-800">Crédits par type</h3>
+                  <Doughnut
+                    data={typeChart}
                     options={{
                       responsive: true,
-                      plugins: { legend: { labels: { color: '#475569' } } },
-                      scales: {
-                        x: { ticks: { color: '#64748b' }, grid: { color: '#e2e8f0' } },
-                        y: { ticks: { color: '#64748b' }, grid: { color: '#e2e8f0' } },
-                      },
+                      plugins: { legend: { position: 'bottom', labels: { color: '#475569' } } },
                     }}
                   />
                 </div>
               )}
+
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800">Derniers dossiers</h3>
+                <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                      <tr>
+                        <th className="px-3 py-2">Client</th>
+                        <th className="px-3 py-2">Montant</th>
+                        <th className="px-3 py-2">Type</th>
+                        <th className="px-3 py-2">Indicateur</th>
+                        <th className="px-3 py-2">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {workspace.recent.map((r) => (
+                        <tr key={r._id} className="hover:bg-slate-50">
+                          <td className="px-3 py-2">
+                            <Link className="font-medium text-blue-700 hover:underline" to={`/dossiers/${r._id}`}>
+                              {typeof r.applicantId === 'object' && r.applicantId
+                                ? `${r.applicantId.firstName || ''} ${r.applicantId.lastName || ''}`.trim() ||
+                                  r.applicantId.email
+                                : '—'}
+                            </Link>
+                          </td>
+                          <td className="px-3 py-2 tabular-nums">{formatTnd(r.amount)}</td>
+                          <td className="px-3 py-2">{creditTypeLabel(r.creditType)}</td>
+                          <td className="px-3 py-2 tabular-nums">
+                            {r.scoring?.score != null ? `${r.scoring.score}/100` : '—'}
+                          </td>
+                          <td className="px-3 py-2">
+                            <span className="text-xs font-medium text-slate-700">{statusLabelFr(r.status)}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </>
           )}
         </section>

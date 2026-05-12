@@ -29,8 +29,8 @@ function PublicHome() {
               <span className="text-cyan-200">simple et transparent</span>
             </h1>
             <p className="mt-4 max-w-xl text-sm leading-relaxed text-blue-100 sm:text-base">
-              Simulez en dinars tunisiens (TND), déposez votre dossier, suivez chaque étape du workflow et consultez un
-              scoring explicite — sans surprise.
+              Simulez en dinars tunisiens (TND), déposez votre dossier, suivez chaque étape du circuit et consultez une
+              analyse de risque détaillée — sans surprise.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -80,7 +80,7 @@ function PublicHome() {
                 </span>
                 <div>
                   <div className="font-semibold">Suivez la décision</div>
-                  <div className="text-blue-100/90">Score, motifs et historique par rôle métier.</div>
+                  <div className="text-blue-100/90">Indicateurs, motifs et historique par rôle métier.</div>
                 </div>
               </li>
             </ol>
@@ -103,10 +103,10 @@ function PublicHome() {
           </Link>
         </div>
         <div className="stb-card group transition hover:border-emerald-300/50 hover:shadow-lg">
-          <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Scoring</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Analyse</div>
           <h2 className="mt-2 text-lg font-semibold text-slate-900">Décision lisible</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Score sur 100, facteurs clés et recommandations — idéal pour anticiper une demande.
+            Indicateur sur 100, facteurs clés et recommandations — idéal pour anticiper une demande.
           </p>
           <Link to="/assistant" className="mt-4 inline-flex text-sm font-semibold text-emerald-700 group-hover:underline">
             Parler à l&apos;assistant →
@@ -139,7 +139,7 @@ function PublicHome() {
               <li className="flex gap-3">
                 <CheckIcon />
                 <span>
-                  <strong className="text-slate-900">Transparence</strong> — scoring et étapes visibles sur votre dossier.
+                  <strong className="text-slate-900">Transparence</strong> — analyse et étapes visibles sur votre dossier.
                 </span>
               </li>
               <li className="flex gap-3">
@@ -235,7 +235,7 @@ function ClientHome({ user }: { user: SafeUser }) {
           },
           {
             title: 'Profil',
-            desc: 'Téléphone, adresse, photo — pour un meilleur scoring.',
+            desc: 'Téléphone, adresse, photo — pour une analyse plus précise.',
             to: '/compte',
             accent: 'from-cyan-600 to-cyan-500',
           },
@@ -260,7 +260,7 @@ function ClientHome({ user }: { user: SafeUser }) {
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
             ['Brouillon / soumis', 'Vous préparez et envoyez la demande.'],
-            ['Analyse', 'L’agence étudie le dossier et le scoring.'],
+            ['Analyse', 'L’agence étudie le dossier et la grille de risque.'],
             ['Validations', 'Chef d’agence puis comité si nécessaire.'],
             ['Décision', 'Approuvé, refusé ou demande de modification.'],
           ].map(([t, d], i) => (

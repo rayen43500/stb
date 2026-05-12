@@ -30,7 +30,7 @@ export function fallbackChatReply(text: string): ChatResponse {
   if (t.includes('score') || t.includes('risque')) {
     return {
       reply:
-        'Le scoring combine endettement, contrat et historique. Donnez un exemple chiffré (montant, durée, revenus) pour un calcul automatique.',
+        'La grille d’analyse combine endettement, contrat et historique. Donnez un exemple chiffré (montant, durée, revenus) pour un calcul automatique.',
       suggestions: [
         { label: 'Exemple 20k / 5 ans', query: 'crédit de 20000 sur 5 ans revenus 3200 charges 900' },
       ],
@@ -39,9 +39,9 @@ export function fallbackChatReply(text: string): ChatResponse {
   }
   return {
     reply:
-      'Indiquez un sujet (simulation, dossier) ou une phrase avec montant, durée et revenus pour lancer simulation + scoring.',
+      'Indiquez un sujet (simulation, dossier) ou une phrase avec montant, durée et revenus pour lancer simulation et grille d’analyse.',
     suggestions: [
-      { label: 'Test scoring', query: 'crédit de 20000 sur 5 ans revenus 3200 charges 900' },
+      { label: 'Test analyse', query: 'crédit de 20000 sur 5 ans revenus 3200 charges 900' },
       { label: 'FAQ cycle', query: 'cycle du dossier' },
     ],
     links: [{ label: 'Simulation', path: '/simulation' }],

@@ -4,6 +4,7 @@
 import { callScoringService } from "../utils/scoringClient.js";
 import { runSimulation } from "../utils/simulation.js";
 import { parseCreditEntities, wantsScoringOrAcceptance } from "../utils/chatNlp.js";
+import { extractEntitiesWithGemini, mergeRegexAndGemini } from "../utils/geminiNlp.js";
 import { buildChatScoringReply } from "../utils/chatScoringReply.js";
 
 const link = (label, path) => ({ label, path });
@@ -109,7 +110,8 @@ export async function handleChatMessage(req, res, next) {
   try {
     const raw = String(req.body?.text || "").trim();
     const t = raw.toLowerCase();
-    const entities = parseCreditEntities(raw);
+    const geminiEntities = await extractEntitiesWithGemini(raw);
+    const entities = mergeRegexAndGemini(parseCreditEntities(raw), geminiEntities);
 
     const user = req.user;
     const income =

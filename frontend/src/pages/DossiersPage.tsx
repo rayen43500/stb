@@ -5,6 +5,7 @@ import { formatTnd } from '../lib/money'
 import { statusBadgeClass, statusLabelFr } from '../lib/creditStatusStyle'
 import { useAuth } from '../context/AuthContext'
 import { roleLabelFr } from '../lib/roleLabels'
+import { creditTypeLabel } from '../lib/creditTypeLabels'
 import type { Role } from '../types'
 
 type CreditRow = {
@@ -13,8 +14,20 @@ type CreditRow = {
   amount: number
   durationMonths: number
   annualRatePercent: number
+  creditType?: string
   updatedAt: string
+  scoring?: { score?: number; category?: string }
   applicantId?: { email?: string; firstName?: string; lastName?: string }
+  comments?: Array<{ role: string; text: string }>
+}
+
+function dernierAvisChef(comments?: CreditRow['comments']): string {
+  if (!comments?.length) return '—'
+  const chefs = comments.filter((c) => c.role === 'CHEF_AGENCE')
+  const last = chefs[chefs.length - 1]
+  const t = last?.text?.trim()
+  if (!t) return '—'
+  return t.length > 80 ? `${t.slice(0, 77)}…` : t
 }
 
 const ALL_STATUSES = [
@@ -65,7 +78,16 @@ export function DossiersPage() {
   const [rows, setRows] = useState<CreditRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [creditTypeFilter, setCreditTypeFilter] = useState<string>('all')
+  const [riskFilter, setRiskFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [montantMin, setMontantMin] = useState('')
+  const [montantMax, setMontantMax] = useState('')
+  const [scoreMin, setScoreMin] = useState('')
+  const [scoreMax, setScoreMax] = useState('')
+  const [highAmountOnly, setHighAmountOnly] = useState(false)
 
   useEffect(() => {
     api
@@ -85,22 +107,67 @@ export function DossiersPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
+    const minAmt = montantMin.trim() !== '' ? Number(montantMin) : null
+    const maxAmt = montantMax.trim() !== '' ? Number(montantMax) : null
+    const minScore = scoreMin.trim() !== '' ? Number(scoreMin) : null
+    const maxScore = scoreMax.trim() !== '' ? Number(scoreMax) : null
+    let start: Date | null = null
+    let end: Date | null = null
+    if (dateFrom) {
+      start = new Date(dateFrom)
+      start.setHours(0, 0, 0, 0)
+    }
+    if (dateTo) {
+      end = new Date(dateTo)
+      end.setHours(23, 59, 59, 999)
+    }
+
     return rows.filter((row) => {
       if (statusFilter !== 'all' && row.status !== statusFilter) return false
+      if (creditTypeFilter !== 'all' && row.creditType !== creditTypeFilter) return false
+      if (riskFilter !== 'all' && (row.scoring?.category || '') !== riskFilter) return false
+      if (highAmountOnly && row.amount < 50_000) return false
+      if (minAmt != null && !Number.isNaN(minAmt) && row.amount < minAmt) return false
+      if (maxAmt != null && !Number.isNaN(maxAmt) && row.amount > maxAmt) return false
+      const sc = row.scoring?.score
+      if (minScore != null && !Number.isNaN(minScore) && (sc == null || sc < minScore)) return false
+      if (maxScore != null && !Number.isNaN(maxScore) && (sc == null || sc > maxScore)) return false
+      const upd = new Date(row.updatedAt)
+      if (start && upd < start) return false
+      if (end && upd > end) return false
       if (!q) return true
       const ref = row._id.slice(-8).toLowerCase()
+      const fullRef = row._id.toLowerCase()
       const applicant = row.applicantId
       const name =
         typeof applicant === 'object' && applicant
           ? `${applicant.firstName || ''} ${applicant.lastName || ''} ${applicant.email || ''}`.toLowerCase()
           : ''
-      return ref.includes(q) || name.includes(q)
+      return ref.includes(q) || fullRef.includes(q) || name.includes(q)
     })
-  }, [rows, statusFilter, search])
+  }, [
+    rows,
+    statusFilter,
+    creditTypeFilter,
+    riskFilter,
+    search,
+    dateFrom,
+    dateTo,
+    montantMin,
+    montantMax,
+    scoreMin,
+    scoreMax,
+    highAmountOnly,
+  ])
 
   const intro = user ? roleDossiersIntro(user.role) : { title: 'Dossiers crédit', lead: '' }
   const isClient = user?.role === 'CLIENT'
   const showApplicant = Boolean(user && !isClient)
+  /** Colonnes score / risque : tout le personnel banque (pas le client). */
+  const showRiskScoreCols = Boolean(user && !isClient)
+  /** Tableau simplifié pour l’agent (cahier des charges). */
+  const agentCompactCols = user?.role === 'AGENT_BANCAIRE'
+  const showChefAvisCol = user?.role === 'COMITE_CREDIT'
 
   return (
     <div className="stb-page space-y-8">
@@ -172,18 +239,144 @@ export function DossiersPage() {
         </div>
       )}
 
+      {rows.length > 0 && !isClient && (
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap gap-3">
+            <select
+              className="stb-input max-w-xs"
+              value={creditTypeFilter}
+              onChange={(e) => setCreditTypeFilter(e.target.value)}
+            >
+              <option value="all">Tous les types de crédit</option>
+              <option value="CONSO">Consommation</option>
+              <option value="IMMOBILIER">Immobilier</option>
+              <option value="VEHICULE">Véhicule</option>
+              <option value="AUTRE">Autre</option>
+            </select>
+            {showRiskScoreCols && (
+              <select
+                className="stb-input max-w-xs"
+                value={riskFilter}
+                onChange={(e) => setRiskFilter(e.target.value)}
+              >
+                <option value="all">Tous les risques</option>
+                <option value="FAIBLE">Risque faible</option>
+                <option value="MOYEN">Risque moyen</option>
+                <option value="ELEVE">Risque élevé</option>
+              </select>
+            )}
+          </div>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="text-xs font-medium text-slate-600">
+              Du
+              <input
+                type="date"
+                className="stb-input mt-1 block w-[11rem]"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+              />
+            </label>
+            <label className="text-xs font-medium text-slate-600">
+              Au
+              <input
+                type="date"
+                className="stb-input mt-1 block w-[11rem]"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+              />
+            </label>
+            <label className="text-xs font-medium text-slate-600">
+              Montant min (TND)
+              <input
+                type="number"
+                min={0}
+                className="stb-input mt-1 block w-[8rem] tabular-nums"
+                value={montantMin}
+                onChange={(e) => setMontantMin(e.target.value)}
+                placeholder="0"
+              />
+            </label>
+            <label className="text-xs font-medium text-slate-600">
+              Montant max (TND)
+              <input
+                type="number"
+                min={0}
+                className="stb-input mt-1 block w-[8rem] tabular-nums"
+                value={montantMax}
+                onChange={(e) => setMontantMax(e.target.value)}
+                placeholder="∞"
+              />
+            </label>
+            {showRiskScoreCols && (
+              <>
+                <label className="text-xs font-medium text-slate-600">
+                  Score min
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    className="stb-input mt-1 block w-[5.5rem] tabular-nums"
+                    value={scoreMin}
+                    onChange={(e) => setScoreMin(e.target.value)}
+                  />
+                </label>
+                <label className="text-xs font-medium text-slate-600">
+                  Score max
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    className="stb-input mt-1 block w-[5.5rem] tabular-nums"
+                    value={scoreMax}
+                    onChange={(e) => setScoreMax(e.target.value)}
+                  />
+                </label>
+              </>
+            )}
+            {user?.role === 'COMITE_CREDIT' && (
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={highAmountOnly}
+                  onChange={(e) => setHighAmountOnly(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-blue-700"
+                />
+                Montants élevés (≥ 50&nbsp;000 TND)
+              </label>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_20px_50px_-24px_rgba(15,23,42,0.2)]">
         <div className="overflow-x-auto">
-          <table className="min-w-[800px] w-full text-left text-sm">
+          <table
+            className={`w-full text-left text-sm ${agentCompactCols ? 'min-w-[720px]' : 'min-w-[920px]'}`}
+          >
             <thead className="border-b border-slate-200 bg-slate-50/95 text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-3.5">Référence</th>
-                {showApplicant && <th className="px-4 py-3.5">Demandeur</th>}
-                <th className="px-4 py-3.5">Montant</th>
-                <th className="px-4 py-3.5">Durée</th>
-                <th className="px-4 py-3.5">Taux</th>
+                {showApplicant && (
+                  <th className="px-4 py-3.5">{agentCompactCols ? 'Client' : 'Demandeur'}</th>
+                )}
+                {agentCompactCols ? (
+                  <>
+                    <th className="px-4 py-3.5">Crédit</th>
+                    <th className="px-4 py-3.5">Montant</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="px-4 py-3.5">Montant</th>
+                    <th className="px-4 py-3.5">Crédit</th>
+                    <th className="px-4 py-3.5">Durée</th>
+                    <th className="px-4 py-3.5">Taux</th>
+                    {showRiskScoreCols && <th className="px-4 py-3.5">Indicateur</th>}
+                    {showRiskScoreCols && <th className="px-4 py-3.5">Risque</th>}
+                  </>
+                )}
+                {showChefAvisCol && <th className="max-w-[200px] px-4 py-3.5">Avis chef</th>}
                 <th className="px-4 py-3.5">Statut</th>
-                <th className="px-4 py-3.5">Mise à jour</th>
+                <th className="px-4 py-3.5">Date</th>
                 <th className="px-4 py-3.5 text-right">Action</th>
               </tr>
             </thead>
@@ -212,9 +405,32 @@ export function DossiersPage() {
                       )}
                     </td>
                   )}
-                  <td className="px-4 py-3.5 tabular-nums font-medium text-slate-900">{formatTnd(row.amount)}</td>
-                  <td className="px-4 py-3.5 tabular-nums text-slate-600">{row.durationMonths} mois</td>
-                  <td className="px-4 py-3.5 tabular-nums text-slate-600">{row.annualRatePercent}%</td>
+                  {agentCompactCols ? (
+                    <>
+                      <td className="px-4 py-3.5 text-slate-700">{creditTypeLabel(row.creditType)}</td>
+                      <td className="px-4 py-3.5 tabular-nums font-medium text-slate-900">{formatTnd(row.amount)}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="px-4 py-3.5 tabular-nums font-medium text-slate-900">{formatTnd(row.amount)}</td>
+                      <td className="px-4 py-3.5 text-slate-700">{creditTypeLabel(row.creditType)}</td>
+                      <td className="px-4 py-3.5 tabular-nums text-slate-600">{row.durationMonths} mois</td>
+                      <td className="px-4 py-3.5 tabular-nums text-slate-600">{row.annualRatePercent}%</td>
+                    </>
+                  )}
+                  {showRiskScoreCols && !agentCompactCols && (
+                    <td className="px-4 py-3.5 tabular-nums text-slate-800">
+                      {row.scoring?.score != null ? `${row.scoring.score}/100` : '—'}
+                    </td>
+                  )}
+                  {showRiskScoreCols && !agentCompactCols && (
+                    <td className="px-4 py-3.5 text-slate-700">{row.scoring?.category || '—'}</td>
+                  )}
+                  {showChefAvisCol && (
+                    <td className="max-w-[220px] px-4 py-3.5 text-xs text-slate-700">
+                      {dernierAvisChef(row.comments)}
+                    </td>
+                  )}
                   <td className="px-4 py-3.5">
                     <span
                       className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${statusBadgeClass(row.status)}`}

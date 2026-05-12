@@ -4,6 +4,8 @@ import { api, downloadBlob } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { formatTnd } from '../lib/money'
 import { statusBadgeClass, statusLabelFr } from '../lib/creditStatusStyle'
+import { creditTypeLabel } from '../lib/creditTypeLabels'
+import type { Role } from '../types'
 
 function axiosMessage(err: unknown): string | null {
   if (typeof err === 'object' && err !== null && 'response' in err) {
@@ -13,14 +15,41 @@ function axiosMessage(err: unknown): string | null {
   return null
 }
 
+type ApplicantInfo = {
+  _id?: string
+  email?: string
+  firstName?: string
+  lastName?: string
+  phone?: string
+  nationalId?: string
+  addressLine1?: string
+  addressLine2?: string
+  city?: string
+  postalCode?: string
+  country?: string
+  clientProfile?: {
+    monthlyIncome?: number
+    monthlyCharges?: number
+    contractType?: string
+    seniorityMonths?: number
+  }
+}
+
 type CreditDoc = {
   _id: string
   status: string
   amount: number
   durationMonths: number
   annualRatePercent: number
+  creditType?: string
   monthlyPayment?: number
   debtRatioPercent?: number | null
+  documentVerification?: {
+    cin?: boolean
+    payslip?: boolean
+    contract?: boolean
+    bankStatement?: boolean
+  }
   scoring?: {
     score?: number
     category?: string
@@ -32,6 +61,7 @@ type CreditDoc = {
     recommendedActions?: string[]
   }
   comments?: Array<{ _id?: string; text: string; role: string; action: string; createdAt?: string }>
+  applicantId?: ApplicantInfo | string
 }
 
 type DocMeta = {
@@ -39,6 +69,24 @@ type DocMeta = {
   originalName: string
   createdAt: string
 }
+
+const WORKFLOW_STEPS: { status: string; label: string }[] = [
+  { status: 'BROUILLON', label: 'Brouillon' },
+  { status: 'SOUMIS', label: 'Soumis' },
+  { status: 'EN_ANALYSE', label: 'Analyse de risque' },
+  { status: 'EN_VALIDATION_CHEF', label: 'Validation chef' },
+  { status: 'EN_VALIDATION_COMITE', label: 'Comité' },
+  { status: 'APPROUVÉ', label: 'Approuvé' },
+]
+
+const DOC_CHECKS: { key: keyof NonNullable<CreditDoc['documentVerification']>; label: string }[] = [
+  { key: 'cin', label: 'CIN / identité' },
+  { key: 'payslip', label: 'Fiche de paie' },
+  { key: 'contract', label: 'Contrat de travail' },
+  { key: 'bankStatement', label: 'Relevé bancaire' },
+]
+
+const CREDIT_TYPES = ['CONSO', 'IMMOBILIER', 'VEHICULE', 'AUTRE'] as const
 
 export function CreditDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -51,6 +99,7 @@ export function CreditDetailPage() {
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [docError, setDocError] = useState<string | null>(null)
+  const [metaError, setMetaError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   const loadDocuments = useCallback(async () => {
@@ -69,7 +118,7 @@ export function CreditDetailPage() {
     if (!id) return
     const [{ data: c }, { data: a }] = await Promise.all([
       api.get<CreditDoc>(`/credits/${id}`),
-      api.get<{ allowedNext: string[] }>(`/credits/${id}/allowed-next`),
+      api.get<{ current: string; allowedNext: string[] }>(`/credits/${id}/allowed-next`),
     ])
     setCredit(c)
     setAllowed(a.allowedNext)
@@ -116,6 +165,20 @@ export function CreditDetailPage() {
     }
   }
 
+  async function patchMeta(partial: { creditType?: string; documentVerification?: Partial<CreditDoc['documentVerification']> }) {
+    if (!id) return
+    setLoading(true)
+    setMetaError(null)
+    try {
+      await api.patch(`/credits/${id}/meta`, partial)
+      await refresh()
+    } catch (err: unknown) {
+      setMetaError(axiosMessage(err) || 'Mise à jour impossible')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function dlPdf() {
     if (!id) return
     await downloadBlob(`/credits/${id}/amortissement.pdf`, `amortissement-${id}.pdf`)
@@ -135,9 +198,52 @@ export function CreditDetailPage() {
     return list
   }, [credit?.comments])
 
+  const timelineAsc = useMemo(() => {
+    const list = [...(credit?.comments || [])]
+    list.sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0
+      return ta - tb
+    })
+    return list
+  }, [credit?.comments])
+
+  const applicant = credit?.applicantId && typeof credit.applicantId === 'object' ? credit.applicantId : null
+
+  const chefAvis = useMemo(() => {
+    const chefs = (credit?.comments || []).filter((c) => c.role === 'CHEF_AGENCE')
+    const last = chefs[chefs.length - 1]
+    return last?.text
+  }, [credit?.comments])
+
+  const role = user?.role as Role | undefined
+  const isClient = role === 'CLIENT'
+  const canVerifyDocs = role === 'ADMIN' || role === 'AGENT_BANCAIRE'
+  const canEditMetaType = ['ADMIN', 'AGENT_BANCAIRE', 'CHEF_AGENCE', 'COMITE_CREDIT'].includes(role || '')
+
+  const activeStepIndex = useMemo(() => {
+    if (!credit) return -1
+    const order = [
+      'BROUILLON',
+      'SOUMIS',
+      'EN_ANALYSE',
+      'EN_VALIDATION_CHEF',
+      'EN_VALIDATION_COMITE',
+      'APPROUVÉ',
+      'REFUSÉ',
+      'À_MODIFIER',
+    ]
+    const idx = order.indexOf(credit.status)
+    if (credit.status === 'REFUSÉ') return 5
+    if (credit.status === 'À_MODIFIER') return 1
+    return idx >= 0 ? Math.min(idx, WORKFLOW_STEPS.length - 1) : 0
+  }, [credit])
+
   if (!credit) {
     return <div className="text-slate-600">{error || 'Chargement…'}</div>
   }
+
+  const dv = credit.documentVerification || {}
 
   return (
     <div className="stb-page space-y-8">
@@ -154,8 +260,8 @@ export function CreditDetailPage() {
             >
               {statusLabelFr(credit.status)}
             </span>{' '}
-            · {formatTnd(credit.amount)} /{' '}
-            {credit.durationMonths} mois @ {credit.annualRatePercent}%
+            · {formatTnd(credit.amount)} / {credit.durationMonths} mois @ {credit.annualRatePercent}% ·{' '}
+            <span className="font-medium text-slate-800">{creditTypeLabel(credit.creditType)}</span>
           </p>
         </div>
         <button
@@ -167,25 +273,207 @@ export function CreditDetailPage() {
         </button>
       </div>
 
+      <section className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50/80 to-white p-6 shadow-sm">
+        <h2 className="text-lg font-medium text-slate-900">Parcours du dossier</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Soumis → Vérification agent → Scoring → Validation chef → Comité → Décision finale
+        </p>
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          {WORKFLOW_STEPS.map((step, i) => {
+            const reached = activeStepIndex >= i || credit.status === step.status
+            const current = credit.status === step.status
+            return (
+              <div key={step.status} className="flex items-center gap-2">
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                    current
+                      ? 'bg-blue-700 text-white ring-blue-800'
+                      : reached
+                        ? 'bg-emerald-50 text-emerald-900 ring-emerald-200'
+                        : 'bg-slate-100 text-slate-500 ring-slate-200'
+                  }`}
+                >
+                  {step.label}
+                </span>
+                {i < WORKFLOW_STEPS.length - 1 && <span className="text-slate-300">→</span>}
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      {applicant && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-medium text-slate-900">Informations client</h2>
+            <dl className="mt-4 space-y-2 text-sm">
+              <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
+                <dt className="text-slate-500">Nom</dt>
+                <dd className="font-medium text-slate-900">
+                  {applicant.firstName} {applicant.lastName}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
+                <dt className="text-slate-500">E-mail</dt>
+                <dd className="text-slate-800">{applicant.email}</dd>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
+                <dt className="text-slate-500">CIN</dt>
+                <dd className="font-mono text-slate-800">{applicant.nationalId || '—'}</dd>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
+                <dt className="text-slate-500">Téléphone</dt>
+                <dd className="text-slate-800">{applicant.phone || '—'}</dd>
+              </div>
+              <div className="flex justify-between gap-4 py-2">
+                <dt className="text-slate-500">Adresse</dt>
+                <dd className="max-w-[60%] text-right text-slate-800">
+                  {[applicant.addressLine1, applicant.addressLine2, applicant.postalCode, applicant.city, applicant.country]
+                    .filter(Boolean)
+                    .join(', ') || '—'}
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-medium text-slate-900">Informations financières</h2>
+            <dl className="mt-4 space-y-2 text-sm">
+              <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
+                <dt className="text-slate-500">Revenus nets (TND)</dt>
+                <dd className="tabular-nums font-medium">
+                  {applicant.clientProfile?.monthlyIncome != null
+                    ? formatTnd(applicant.clientProfile.monthlyIncome)
+                    : '—'}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
+                <dt className="text-slate-500">Charges (TND)</dt>
+                <dd className="tabular-nums">
+                  {applicant.clientProfile?.monthlyCharges != null
+                    ? formatTnd(applicant.clientProfile.monthlyCharges)
+                    : '—'}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
+                <dt className="text-slate-500">Contrat / ancienneté</dt>
+                <dd className="text-slate-800">
+                  {applicant.clientProfile?.contractType || '—'}{' '}
+                  {applicant.clientProfile?.seniorityMonths != null
+                    ? `· ${applicant.clientProfile.seniorityMonths} mois`
+                    : ''}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4 py-2">
+                <dt className="text-slate-500">Endettement après prêt</dt>
+                <dd className="tabular-nums font-semibold text-slate-900">
+                  {credit.debtRatioPercent != null ? `${credit.debtRatioPercent} %` : '—'}
+                </dd>
+              </div>
+            </dl>
+          </section>
+        </div>
+      )}
+
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-medium text-slate-900">Crédit demandé</h2>
+        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-slate-500">Montant</dt>
+            <dd className="font-semibold text-slate-900">{formatTnd(credit.amount)}</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Durée</dt>
+            <dd>{credit.durationMonths} mois</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Taux annuel</dt>
+            <dd>{credit.annualRatePercent}%</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Mensualité (simulation)</dt>
+            <dd className="tabular-nums">{credit.monthlyPayment != null ? formatTnd(credit.monthlyPayment) : '—'}</dd>
+          </div>
+        </dl>
+
+        {canEditMetaType && (
+          <div className="mt-6 flex flex-wrap items-end gap-4 border-t border-slate-100 pt-6">
+            <label className="text-sm text-slate-600">
+              Type de crédit
+              <select
+                className="mt-1 block rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800"
+                value={credit.creditType || 'CONSO'}
+                onChange={(e) => patchMeta({ creditType: e.target.value })}
+                disabled={loading}
+              >
+                {CREDIT_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {creditTypeLabel(t)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {metaError && <p className="text-sm text-red-600">{metaError}</p>}
+          </div>
+        )}
+      </section>
+
+      {role === 'COMITE_CREDIT' && chefAvis && (
+        <section className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-6">
+          <h2 className="text-lg font-medium text-indigo-950">Avis chef d&apos;agence</h2>
+          <p className="mt-2 whitespace-pre-wrap text-sm text-indigo-900">{chefAvis}</p>
+        </section>
+      )}
+
       {credit.scoring?.score != null && (
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-slate-900">Scoring</h2>
-          <p className="mt-2 text-slate-600">
-            Score {credit.scoring.score}/100 — risque {credit.scoring.category}
-            {credit.scoring.decision && (
+          <h2 className="text-lg font-medium text-slate-900">Analyse de risque</h2>
+          <div className="mt-4 overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <tbody>
+                <tr className="border-b border-slate-100">
+                  <td className="py-2 text-slate-500">Revenus (profil)</td>
+                  <td className="py-2 font-medium tabular-nums">
+                    {applicant?.clientProfile?.monthlyIncome != null
+                      ? formatTnd(applicant.clientProfile.monthlyIncome)
+                      : '—'}
+                  </td>
+                </tr>
+                <tr className="border-b border-slate-100">
+                  <td className="py-2 text-slate-500">Charges</td>
+                  <td className="py-2 font-medium tabular-nums">
+                    {applicant?.clientProfile?.monthlyCharges != null
+                      ? formatTnd(applicant.clientProfile.monthlyCharges)
+                      : '—'}
+                  </td>
+                </tr>
+                <tr className="border-b border-slate-100">
+                  <td className="py-2 text-slate-500">Endettement</td>
+                  <td className="py-2 font-semibold tabular-nums">
+                    {credit.debtRatioPercent != null ? `${credit.debtRatioPercent} %` : '—'}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-slate-500">Indicateur / niveau de risque</td>
+                  <td className="py-2">
+                    <span className="font-bold text-slate-900">{credit.scoring.score}/100</span>
+                    {' — '}
+                    <span className="text-amber-800">{credit.scoring.category}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-4 text-slate-600">
+            Orientation indicative : <strong>{credit.scoring.decision}</strong>
+            {credit.scoring.decisionLabelFr && (
               <>
                 {' '}
-                — décision indicative :{' '}
-                <span className="font-medium text-slate-900">{credit.scoring.decision}</span>
-                {credit.scoring.decision === 'ACCEPTE' && ' (≥ 80)'}
-                {credit.scoring.decision === 'A_ANALYSER' && ' (50–79)'}
-                {credit.scoring.decision === 'REFUS' && ' (< 50)'}
+                — {credit.scoring.decisionLabelFr}
               </>
             )}
           </p>
-          {credit.scoring.decisionLabelFr && (
-            <p className="mt-1 text-sm text-slate-600">{credit.scoring.decisionLabelFr}</p>
-          )}
+          <p className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500">Synthèse d&apos;analyse</p>
           <p className="mt-2 text-sm text-slate-600">{credit.scoring.justification}</p>
           {credit.scoring.recommendedActions && credit.scoring.recommendedActions.length > 0 && (
             <ul className="mt-2 list-inside list-disc text-sm text-emerald-700">
@@ -204,10 +492,43 @@ export function CreditDetailPage() {
         </section>
       )}
 
+      {canVerifyDocs && (
+        <section className="rounded-xl border border-amber-200 bg-amber-50/40 p-6 shadow-sm">
+          <h2 className="text-lg font-medium text-slate-900">Vérification des pièces (agent)</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Cochez les pièces conformes après contrôle (CIN, fiche de paie, contrat, relevé).
+          </p>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+            {DOC_CHECKS.map(({ key, label }) => (
+              <li key={key} className="flex items-center gap-3 rounded-lg bg-white px-4 py-3 ring-1 ring-slate-200">
+                <input
+                  type="checkbox"
+                  id={key}
+                  checked={Boolean(dv[key])}
+                  onChange={(e) =>
+                    patchMeta({
+                      documentVerification: { ...dv, [key]: e.target.checked },
+                    })
+                  }
+                  disabled={loading}
+                  className="h-4 w-4 rounded border-slate-300 text-blue-700"
+                />
+                <label htmlFor={key} className="text-sm font-medium text-slate-800">
+                  {label}
+                </label>
+              </li>
+            ))}
+          </ul>
+          {metaError && <p className="mt-3 text-sm text-red-600">{metaError}</p>}
+        </section>
+      )}
+
       {allowed.length > 0 && (
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-medium text-slate-900">Action métier</h2>
-          <p className="text-sm text-slate-600">Transitions autorisées pour votre rôle ({user?.role}).</p>
+          <p className="text-sm text-slate-600">
+            Transitions autorisées pour votre rôle ({user?.role}). Commentaire obligatoire pour traçabilité.
+          </p>
           <form className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end" onSubmit={applyTransition}>
             <label className="text-sm text-slate-600">
               Prochain statut
@@ -218,7 +539,7 @@ export function CreditDetailPage() {
               >
                 {allowed.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {statusLabelFr(s)}
                   </option>
                 ))}
               </select>
@@ -230,7 +551,7 @@ export function CreditDetailPage() {
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-700"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="Motif / analyse…"
+                placeholder="Ex. Document manquant : relevé des 3 derniers mois."
               />
             </label>
             <button
@@ -247,20 +568,25 @@ export function CreditDetailPage() {
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-medium text-slate-900">Documents justificatifs</h2>
-        <form className="mt-4 flex flex-wrap items-end gap-4" onSubmit={uploadDoc}>
-          <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-          <button
-            type="submit"
-            disabled={!file || loading}
-            className="rounded-lg bg-blue-700 px-4 py-2 text-sm text-white hover:bg-blue-600 disabled:opacity-50"
-          >
-            Envoyer
-          </button>
-        </form>
+        {isClient && (
+          <form className="mt-4 flex flex-wrap items-end gap-4" onSubmit={uploadDoc}>
+            <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+            <button
+              type="submit"
+              disabled={!file || loading}
+              className="rounded-lg bg-blue-700 px-4 py-2 text-sm text-white hover:bg-blue-600 disabled:opacity-50"
+            >
+              Envoyer
+            </button>
+          </form>
+        )}
+        {!isClient && (
+          <p className="mt-2 text-sm text-slate-600">Téléchargement des pièces déposées par le client.</p>
+        )}
         {docError && <p className="mt-3 text-sm text-red-600">{docError}</p>}
         <ul className="mt-4 space-y-2 text-sm">
           {docs.map((d) => (
-            <li key={d._id} className="flex items-center justify-between gap-2">
+            <li key={d._id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
               <span className="text-slate-700">{d.originalName}</span>
               <button
                 type="button"
@@ -276,10 +602,41 @@ export function CreditDetailPage() {
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-medium text-slate-900">Historique & commentaires</h2>
+        <h2 className="text-lg font-medium text-slate-900">Historique & traçabilité</h2>
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
+              <tr>
+                <th className="py-2 pr-4">Action</th>
+                <th className="py-2 pr-4">Rôle</th>
+                <th className="py-2 pr-4">Date</th>
+                <th className="py-2">Détail</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {timelineAsc.map((c, i) => (
+                <tr key={c._id || i}>
+                  <td className="py-3 font-medium text-slate-800">{c.action}</td>
+                  <td className="py-3 text-slate-600">{c.role}</td>
+                  <td className="py-3 whitespace-nowrap text-slate-500">
+                    {c.createdAt ? new Date(c.createdAt).toLocaleString('fr-TN') : '—'}
+                  </td>
+                  <td className="py-3 whitespace-pre-wrap text-slate-700">{c.text}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {timelineAsc.length === 0 && (
+          <p className="mt-4 text-sm text-slate-500">Aucun événement enregistré pour ce dossier.</p>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+        <h2 className="text-lg font-medium text-slate-900">Commentaires récents</h2>
         <ul className="mt-4 space-y-3 text-sm">
           {sortedComments.map((c, i) => (
-            <li key={c._id || i} className="rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+            <li key={c._id || i} className="rounded-lg bg-white px-4 py-3 ring-1 ring-slate-200">
               <div className="text-xs text-slate-500">
                 {c.role} · {c.action}
                 {c.createdAt ? ` · ${new Date(c.createdAt).toLocaleString('fr-TN')}` : ''}
@@ -289,7 +646,7 @@ export function CreditDetailPage() {
           ))}
         </ul>
         {sortedComments.length === 0 && (
-          <p className="mt-4 text-sm text-slate-500">Aucun événement ou commentaire enregistré pour ce dossier.</p>
+          <p className="mt-4 text-sm text-slate-500">Aucun commentaire pour le moment.</p>
         )}
       </section>
     </div>

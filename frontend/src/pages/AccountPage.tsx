@@ -28,6 +28,8 @@ export function AccountPage() {
   const [city, setCity] = useState('')
   const [postalCode, setPostalCode] = useState('')
   const [country, setCountry] = useState('Tunisie')
+  const [nationalId, setNationalId] = useState('')
+  const [agencyName, setAgencyName] = useState('')
 
   const [monthlyIncome, setMonthlyIncome] = useState<number | ''>('')
   const [monthlyCharges, setMonthlyCharges] = useState<number | ''>('')
@@ -52,6 +54,8 @@ export function AccountPage() {
     setCity(user.city || '')
     setPostalCode(user.postalCode || '')
     setCountry(user.country || 'Tunisie')
+    setNationalId(user.nationalId || '')
+    setAgencyName(user.staffProfile?.agencyName || '')
     const cp = user.clientProfile
     if (cp) {
       setMonthlyIncome(cp.monthlyIncome ?? '')
@@ -76,10 +80,11 @@ export function AccountPage() {
 
   async function saveIdentity(e: React.FormEvent) {
     e.preventDefault()
+    if (!user) return
     setSaving(true)
     setMsg(null)
     try {
-      await api.patch('/profile', {
+      const body: Record<string, unknown> = {
         firstName,
         lastName,
         phone,
@@ -88,7 +93,12 @@ export function AccountPage() {
         city,
         postalCode,
         country,
-      })
+        nationalId,
+      }
+      if (['ADMIN', 'AGENT_BANCAIRE', 'CHEF_AGENCE', 'COMITE_CREDIT'].includes(user.role)) {
+        body.staffProfile = { agencyName: agencyName.trim() || undefined }
+      }
+      await api.patch('/profile', body)
       await refreshMe()
       setMsg({ type: 'ok', text: 'Informations enregistrées.' })
     } catch (err) {
@@ -276,6 +286,26 @@ export function AccountPage() {
             <label className="stb-label">Pays</label>
             <input className="stb-input" value={country} onChange={(e) => setCountry(e.target.value)} />
           </div>
+          <div>
+            <label className="stb-label">CIN / N° pièce d&apos;identité</label>
+            <input
+              className="stb-input"
+              value={nationalId}
+              onChange={(e) => setNationalId(e.target.value)}
+              placeholder="Ex. 12345678"
+            />
+          </div>
+          {['ADMIN', 'AGENT_BANCAIRE', 'CHEF_AGENCE', 'COMITE_CREDIT'].includes(user.role) && (
+            <div>
+              <label className="stb-label">Agence (affichage profil)</label>
+              <input
+                className="stb-input"
+                value={agencyName}
+                onChange={(e) => setAgencyName(e.target.value)}
+                placeholder="Ex. Agence centre-ville"
+              />
+            </div>
+          )}
           <div className="sm:col-span-2">
             <button type="submit" disabled={saving} className="stb-btn-primary">
               Enregistrer les informations
@@ -286,9 +316,9 @@ export function AccountPage() {
 
       {user.role === 'CLIENT' && (
         <section className="stb-card border-emerald-200/80 bg-gradient-to-br from-white to-emerald-50/40">
-          <h2 className="text-lg font-semibold text-slate-900">Profil financier (crédit & scoring)</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Profil financier & crédit</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Ces données alimentent les simulations et le scoring lors de l&apos;analyse de vos dossiers.
+            Ces données alimentent les simulations et l&apos;étude de risque lors de l&apos;analyse de vos dossiers.
           </p>
           <form className="mt-6 grid gap-5 sm:grid-cols-2" onSubmit={saveClientFinance}>
             <div>

@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import bcrypt from "bcryptjs";
+import { ROLES } from "../models/User.js";
 import { avatarsDir } from "../middleware/upload.js";
 
 function trimOrUndef(v) {
@@ -22,9 +23,16 @@ export async function updateProfile(req, res, next) {
       "city",
       "postalCode",
       "country",
+      "nationalId",
     ];
     for (const key of fields) {
       if (body[key] !== undefined) u[key] = trimOrUndef(body[key]);
+    }
+    const staffRoles = [ROLES.ADMIN, ROLES.AGENT_BANCAIRE, ROLES.CHEF_AGENCE, ROLES.COMITE_CREDIT];
+    if (staffRoles.includes(req.userRole) && body.staffProfile?.agencyName !== undefined) {
+      u.staffProfile = u.staffProfile || {};
+      u.staffProfile.agencyName = trimOrUndef(body.staffProfile.agencyName);
+      u.markModified("staffProfile");
     }
     await u.save();
     res.json({ user: u.toSafeJSON() });

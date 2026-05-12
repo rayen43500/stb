@@ -6,6 +6,7 @@ export function DemandePage() {
   const [amount, setAmount] = useState(20000)
   const [durationMonths, setDurationMonths] = useState(36)
   const [annualRatePercent, setAnnualRatePercent] = useState(5.2)
+  const [creditType, setCreditType] = useState<'CONSO' | 'IMMOBILIER' | 'VEHICULE' | 'AUTRE'>('CONSO')
   const [createdId, setCreatedId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -19,6 +20,7 @@ export function DemandePage() {
         amount,
         durationMonths,
         annualRatePercent,
+        creditType,
       })
       setCreatedId(data._id)
     } catch (err: unknown) {
@@ -72,6 +74,19 @@ export function DemandePage() {
               value={annualRatePercent}
               onChange={(e) => setAnnualRatePercent(Number(e.target.value))}
             />
+          </div>
+          <div>
+            <label className="stb-label">Type de crédit</label>
+            <select
+              className="stb-input"
+              value={creditType}
+              onChange={(e) => setCreditType(e.target.value as typeof creditType)}
+            >
+              <option value="CONSO">Consommation</option>
+              <option value="IMMOBILIER">Immobilier</option>
+              <option value="VEHICULE">Véhicule</option>
+              <option value="AUTRE">Autre</option>
+            </select>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button type="submit" disabled={loading} className="stb-btn-primary w-full py-3">

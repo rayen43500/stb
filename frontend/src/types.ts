@@ -17,6 +17,8 @@ export type SafeUser = {
   city?: string
   postalCode?: string
   country?: string
+  nationalId?: string
+  staffProfile?: { agencyName?: string }
   hasAvatar?: boolean
   updatedAt?: string
   clientProfile?: {

@@ -1,8 +1,15 @@
 """
-Service de scoring STB — règles explicables (sans deep learning).
-Décision projet : 80–100 → favorable, 50–79 → à analyser, <50 → défavorable.
-Le taux d'endettement transmis par Node est celui après prêt : (charges + mensualité) / revenus × 100.
+Service STB Scoring + NLP.
+- /score: règles explicables.
+- /nlp/parse: extraction d'entités crédit (fallback regex, option LLM via API key).
 """
+from __future__ import annotations
+
+import json
+import os
+import re
+import urllib.error
+import urllib.request
 from typing import Literal, Tuple
 
 from fastapi import FastAPI
@@ -33,6 +40,21 @@ class ScoreResponse(BaseModel):
     weak_points: list[str]
     recommended_actions: list[str]
     justification: str
+
+
+class NlpParseRequest(BaseModel):
+    text: str = ""
+
+
+class NlpParseResponse(BaseModel):
+    amount: float | None = None
+    durationMonths: int | None = None
+    annualRatePercent: float | None = None
+    monthlyIncome: float | None = None
+    monthlyCharges: float | None = None
+    intent: str | None = None
+    confidence: float = 0.0
+    source: str = "regex"
 
 
 def _decision_from_score(score: int) -> Tuple[Decision, str]:
@@ -153,3 +175,122 @@ def health():
 @app.post("/score", response_model=ScoreResponse)
 def score(req: ScoreRequest):
     return compute_score(req)
+
+
+def _parse_regex(text: str) -> NlpParseResponse:
+    t = (text or "").replace("\xa0", " ")
+    out = NlpParseResponse(source="regex", confidence=0.55)
+    amount = re.search(
+        r"(?:crédit|credit|prêt|pret|emprunt)\s*(?:de\s*)?(\d[\d\s]*)\s*(?:€|eur|euros|tnd|dt|dinars?)?",
+        t,
+        re.I,
+    )
+    if amount:
+        out.amount = float(amount.group(1).replace(" ", ""))
+    years = re.search(r"(\d+)\s*(?:an|ans)\b", t, re.I)
+    months = re.search(r"(\d+)\s*mois\b", t, re.I)
+    if years:
+        out.durationMonths = int(years.group(1)) * 12
+    if months:
+        out.durationMonths = int(months.group(1))
+    rate = re.search(r"(\d+[.,]\d+)\s*%", t)
+    if rate:
+        out.annualRatePercent = float(rate.group(1).replace(",", "."))
+    rev = re.search(r"(?:revenus?|salaire)\s*(?:de\s*)?(\d[\d\s]*)", t, re.I)
+    chg = re.search(r"charges?\s*(?:de\s*)?(\d[\d\s]*)", t, re.I)
+    if rev:
+        out.monthlyIncome = float(rev.group(1).replace(" ", ""))
+    if chg:
+        out.monthlyCharges = float(chg.group(1).replace(" ", ""))
+    if re.search(r"\b(score|risque|accepte|refus)\b", t, re.I):
+        out.intent = "SCORING"
+    elif re.search(r"\b(simul|mensualit|taux)\b", t, re.I):
+        out.intent = "SIMULATION"
+    else:
+        out.intent = "FAQ"
+    return out
+
+
+def _parse_llm(text: str) -> NlpParseResponse | None:
+    api_key = os.getenv("OPENAI_API_KEY")
+    model = os.getenv("NLP_MODEL", "gpt-4o-mini")
+    if not api_key:
+        return None
+    schema = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "credit_entities",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "amount": {"type": ["number", "null"]},
+                    "durationMonths": {"type": ["integer", "null"]},
+                    "annualRatePercent": {"type": ["number", "null"]},
+                    "monthlyIncome": {"type": ["number", "null"]},
+                    "monthlyCharges": {"type": ["number", "null"]},
+                    "intent": {"type": ["string", "null"]},
+                    "confidence": {"type": ["number", "null"]},
+                },
+                "required": [
+                    "amount",
+                    "durationMonths",
+                    "annualRatePercent",
+                    "monthlyIncome",
+                    "monthlyCharges",
+                    "intent",
+                    "confidence",
+                ],
+                "additionalProperties": False,
+            },
+            "strict": True,
+        },
+    }
+    payload = {
+        "model": model,
+        "temperature": 0,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "Tu extrais des entités de demande de crédit en français tunisien. "
+                    "durationMonths doit être en mois."
+                ),
+            },
+            {"role": "user", "content": text},
+        ],
+        "response_format": schema,
+    }
+    req = urllib.request.Request(
+        "https://api.openai.com/v1/chat/completions",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            body = json.loads(resp.read().decode("utf-8"))
+        content = body["choices"][0]["message"]["content"]
+        parsed = json.loads(content)
+        return NlpParseResponse(
+            amount=parsed.get("amount"),
+            durationMonths=parsed.get("durationMonths"),
+            annualRatePercent=parsed.get("annualRatePercent"),
+            monthlyIncome=parsed.get("monthlyIncome"),
+            monthlyCharges=parsed.get("monthlyCharges"),
+            intent=parsed.get("intent"),
+            confidence=float(parsed.get("confidence") or 0.7),
+            source="llm",
+        )
+    except (urllib.error.URLError, KeyError, ValueError, TypeError):
+        return None
+
+
+@app.post("/nlp/parse", response_model=NlpParseResponse)
+def nlp_parse(req: NlpParseRequest):
+    llm = _parse_llm(req.text)
+    if llm:
+        return llm
+    return _parse_regex(req.text)

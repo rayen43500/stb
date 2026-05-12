@@ -1,5 +1,5 @@
 import PDFDocument from "pdfkit";
-import CreditRequest, { CREDIT_STATUSES } from "../models/CreditRequest.js";
+import CreditRequest, { CREDIT_STATUSES, CREDIT_TYPES } from "../models/CreditRequest.js";
 import User, { ROLES } from "../models/User.js";
 import { runSimulation } from "../utils/simulation.js";
 import { callScoringService } from "../utils/scoringClient.js";
@@ -90,7 +90,7 @@ export async function amortissementPdf(req, res, next) {
 
 export async function createDraft(req, res, next) {
   try {
-    const { amount, durationMonths, annualRatePercent } = req.body;
+    const { amount, durationMonths, annualRatePercent, creditType } = req.body;
     if ([amount, durationMonths, annualRatePercent].some((v) => v == null)) {
       return res.status(400).json({ message: "Montant, durée et taux requis" });
     }
@@ -104,11 +104,13 @@ export async function createDraft(req, res, next) {
       monthlyIncome: inc,
       monthlyCharges: chg,
     });
+    const ct = creditType && CREDIT_TYPES.includes(creditType) ? creditType : "CONSO";
     const doc = await CreditRequest.create({
       applicantId: req.userId,
       amount: Number(amount),
       durationMonths: Number(durationMonths),
       annualRatePercent: Number(annualRatePercent),
+      creditType: ct,
       monthlyPayment: sim.monthlyPayment,
       totalCost: sim.totalCostInterest,
       debtRatioPercent: sim.debtRatioPercent,
@@ -133,6 +135,59 @@ export async function createDraft(req, res, next) {
   }
 }
 
+export async function updateCreditMeta(req, res, next) {
+  try {
+    const doc = await CreditRequest.findById(req.params.id);
+    if (!doc) return res.status(404).json({ message: "Dossier introuvable" });
+
+    const staffRoles = [
+      ROLES.ADMIN,
+      ROLES.AGENT_BANCAIRE,
+      ROLES.CHEF_AGENCE,
+      ROLES.COMITE_CREDIT,
+    ];
+    if (!staffRoles.includes(req.userRole)) {
+      return res.status(403).json({ message: "Réservé au personnel banque" });
+    }
+
+    const { creditType, documentVerification } = req.body || {};
+    if (creditType != null && CREDIT_TYPES.includes(creditType)) {
+      doc.creditType = creditType;
+    }
+
+    const canEditDocs = req.userRole === ROLES.ADMIN || req.userRole === ROLES.AGENT_BANCAIRE;
+    if (documentVerification && typeof documentVerification === "object" && canEditDocs) {
+      doc.documentVerification = doc.documentVerification || {};
+      for (const key of ["cin", "payslip", "contract", "bankStatement"]) {
+        if (typeof documentVerification[key] === "boolean") {
+          doc.documentVerification[key] = documentVerification[key];
+        }
+      }
+      doc.markModified("documentVerification");
+    }
+
+    await doc.save();
+
+    await writeAudit({
+      userId: req.userId,
+      role: req.userRole,
+      action: "CREDIT_META_UPDATE",
+      targetType: "CreditRequest",
+      targetId: doc._id.toString(),
+      details: { creditType: doc.creditType, documentVerification: doc.documentVerification },
+      req,
+    });
+
+    const out = await CreditRequest.findById(doc._id).populate(
+      "applicantId",
+      "email firstName lastName role clientProfile nationalId phone addressLine1 city staffProfile"
+    );
+    res.json(out);
+  } catch (e) {
+    next(e);
+  }
+}
+
 export async function listMine(req, res, next) {
   try {
     const q = req.userRole === ROLES.CLIENT ? { applicantId: req.userId } : {};
@@ -145,7 +200,10 @@ export async function listMine(req, res, next) {
 
 export async function getOne(req, res, next) {
   try {
-    const doc = await CreditRequest.findById(req.params.id).populate("applicantId", "email firstName lastName role clientProfile");
+    const doc = await CreditRequest.findById(req.params.id).populate(
+      "applicantId",
+      "email firstName lastName role clientProfile nationalId phone addressLine1 addressLine2 city postalCode country staffProfile"
+    );
     if (!doc) return res.status(404).json({ message: "Dossier introuvable" });
     if (req.userRole === ROLES.CLIENT && doc.applicantId._id.toString() !== req.userId) {
       return res.status(403).json({ message: "Accès refusé" });

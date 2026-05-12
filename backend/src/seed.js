@@ -24,6 +24,7 @@ const demoUsers = [
     role: ROLES.CLIENT,
     firstName: "Demo",
     lastName: "Client",
+    nationalId: "12345678",
     clientProfile: {
       monthlyIncome: 3500,
       monthlyCharges: 900,
@@ -39,6 +40,7 @@ const demoUsers = [
     role: ROLES.AGENT_BANCAIRE,
     firstName: "Agent",
     lastName: "Démo",
+    staffProfile: { agencyName: "Agence Tunis Centre" },
   },
   {
     email: "chef@stb.local",
@@ -46,6 +48,7 @@ const demoUsers = [
     role: ROLES.CHEF_AGENCE,
     firstName: "Chef",
     lastName: "Agence",
+    staffProfile: { agencyName: "Agence Tunis Centre" },
   },
   {
     email: "comite@stb.local",

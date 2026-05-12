@@ -41,7 +41,7 @@ export function AssistantPage() {
     {
       from: 'bot',
       text:
-        'Bienvenue sur l’assistant STB.\n\nVos messages sont envoyés à POST /api/chat/message. Avec un montant, une durée et vos revenus dans une même phrase, le serveur enchaîne simulation + scoring.\n\nConnectez-vous pour réutiliser automatiquement votre profil client.',
+        'Bienvenue sur l’assistant STB.\n\nVos messages sont envoyés à POST /api/chat/message. Avec un montant, une durée et vos revenus dans une même phrase, le serveur enchaîne simulation et grille d’analyse.\n\nConnectez-vous pour réutiliser automatiquement votre profil client.',
     },
   ])
   const [input, setInput] = useState('')
@@ -95,7 +95,7 @@ export function AssistantPage() {
         <aside className="flex w-full shrink-0 flex-col rounded-2xl border border-slate-200 bg-[#F3F4F6] p-5 shadow-sm lg:w-[300px]">
           <div className="rounded-xl bg-[#1E3A8A] px-4 py-3 text-white shadow-md">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-blue-200/90">Assistant</p>
-            <h1 className="text-lg font-bold leading-tight">Chatbot STB</h1>
+            <h1 className="text-lg font-bold leading-tight">Assistant STB</h1>
             <p className="mt-1 text-xs text-blue-100/90">
               API <span className="font-mono text-[11px]">/api/chat/message</span>
             </p>
@@ -106,7 +106,7 @@ export function AssistantPage() {
             <p className="text-sm leading-relaxed text-slate-700">
               Saisissez une phrase avec <strong className="text-slate-900">montant</strong>,{' '}
               <strong className="text-slate-900">durée</strong> et <strong className="text-slate-900">revenus</strong> pour
-              déclencher simulation + scoring côté serveur.
+              déclencher simulation et grille d’analyse côté serveur.
             </p>
           </div>
 
@@ -147,8 +147,8 @@ export function AssistantPage() {
           </div>
 
           <p className="mt-auto pt-6 text-[11px] leading-relaxed text-[#6B7280]">
-            Évolution : moteur <strong className="text-slate-600">Rasa</strong> ou NLP Python sur la même route, sans
-            modifier la logique métier du scoring.
+            Évolution possible : moteur conversationnel externe sur la même route, sans modifier la grille d’analyse
+            métier.
           </p>
         </aside>
 
@@ -156,12 +156,12 @@ export function AssistantPage() {
         <section className="flex min-h-[420px] flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_70px_-24px_rgba(15,23,42,0.18)]">
           <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3 sm:px-5">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#1E3A8A] to-[#1D4ED8] text-xl text-white shadow-md">
-                🤖
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#1E3A8A] to-[#1D4ED8] text-xs font-bold tracking-tight text-white shadow-md">
+                STB
               </span>
               <div>
                 <h2 className="text-base font-semibold text-[#111827]">Conversation</h2>
-                <p className="text-xs text-[#6B7280]">Simulation · scoring · FAQ</p>
+                <p className="text-xs text-[#6B7280]">Simulation · analyse · FAQ</p>
               </div>
             </div>
             <button
@@ -191,7 +191,7 @@ export function AssistantPage() {
                       <div className="mb-2 flex flex-wrap items-center gap-2">
                         {decisionBadge(msg.meta.scoring.decision)}
                         {msg.meta.scoring.score != null && (
-                          <span className="text-xs text-[#6B7280]">Score {msg.meta.scoring.score}/100</span>
+                          <span className="text-xs text-[#6B7280]">Indicateur {msg.meta.scoring.score}/100</span>
                         )}
                       </div>
                     )}

@@ -27,6 +27,12 @@ const userSchema = new mongoose.Schema(
     postalCode: { type: String, trim: true },
     country: { type: String, trim: true, default: "Tunisie" },
     profileAvatarName: { type: String, trim: true },
+    /** CIN / pièce d'identité — renseigné par le client sur son profil */
+    nationalId: { type: String, trim: true },
+    /** Agence, direction — pour les profils banque */
+    staffProfile: {
+      agencyName: { type: String, trim: true },
+    },
     clientProfile: {
       monthlyIncome: Number,
       monthlyCharges: Number,
@@ -56,6 +62,11 @@ userSchema.methods.toSafeJSON = function toSafeJSON() {
     city: this.city,
     postalCode: this.postalCode,
     country: this.country || "Tunisie",
+    nationalId: this.nationalId,
+    staffProfile:
+      this.staffProfile && this.staffProfile.agencyName
+        ? { agencyName: this.staffProfile.agencyName }
+        : undefined,
     hasAvatar: Boolean(this.profileAvatarName),
     updatedAt: this.updatedAt ? this.updatedAt.toISOString() : undefined,
     clientProfile: this.clientProfile || undefined,
