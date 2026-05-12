@@ -61,8 +61,8 @@ export function SimulationPage() {
   }
 
   return (
-    <div className="stb-page">
-      <div className="mb-8 max-w-2xl">
+    <div className="stb-page stb-stack-tight">
+      <div className="max-w-2xl">
         <h1 className="stb-h1">Simulation de crédit</h1>
         <p className="stb-lead">
           Calcul de la mensualité, du coût des intérêts et du taux d&apos;endettement après prêt (indicateur utilisé en
@@ -71,7 +71,7 @@ export function SimulationPage() {
       </div>
       <div className="grid gap-8 lg:grid-cols-2">
         <section className="stb-card">
-          <h2 className="text-lg font-semibold text-slate-900">Paramètres</h2>
+          <h2 className="stb-h2">Paramètres</h2>
           <p className="mt-1 text-sm text-slate-600">Tous les champs sont pris en compte pour l&apos;endettement.</p>
           <div className="mt-6 grid gap-5 sm:grid-cols-2">
             <label className="block">
@@ -128,7 +128,7 @@ export function SimulationPage() {
         </section>
 
         <section className="stb-card border-blue-200 bg-gradient-to-b from-white to-slate-50">
-          <h2 className="text-lg font-semibold text-slate-900">Résultats</h2>
+          <h2 className="stb-h2">Résultats</h2>
           {!sim && (
             <p className="mt-6 text-sm leading-relaxed text-slate-600">
               Cliquez sur « Calculer » pour afficher la mensualité, les intérêts totaux et une première grille de risque

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 import { api } from '../lib/api'
 import { formatTnd } from '../lib/money'
 import { statusBadgeClass, statusLabelFr } from '../lib/creditStatusStyle'
@@ -40,6 +41,25 @@ const ALL_STATUSES = [
   'REFUSÉ',
   'À_MODIFIER',
 ] as const
+
+type SortKey = 'ref' | 'amount' | 'creditType' | 'status' | 'updatedAt'
+
+function TableSortIcon({
+  column,
+  activeKey,
+  dir,
+}: {
+  column: SortKey
+  activeKey: SortKey
+  dir: 'asc' | 'desc'
+}) {
+  if (activeKey !== column) return <ArrowUpDown className="inline h-3.5 w-3.5 opacity-40" aria-hidden />
+  return dir === 'asc' ? (
+    <ArrowUp className="inline h-3.5 w-3.5 text-blue-700" aria-hidden />
+  ) : (
+    <ArrowDown className="inline h-3.5 w-3.5 text-blue-700" aria-hidden />
+  )
+}
 
 function roleDossiersIntro(role: Role): { title: string; lead: string } {
   switch (role) {
@@ -88,6 +108,8 @@ export function DossiersPage() {
   const [scoreMin, setScoreMin] = useState('')
   const [scoreMax, setScoreMax] = useState('')
   const [highAmountOnly, setHighAmountOnly] = useState(false)
+  const [sortKey, setSortKey] = useState<SortKey>('updatedAt')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     api
@@ -160,6 +182,43 @@ export function DossiersPage() {
     highAmountOnly,
   ])
 
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir(key === 'updatedAt' || key === 'amount' ? 'desc' : 'asc')
+    }
+  }
+
+  const sortedFiltered = useMemo(() => {
+    const arr = [...filtered]
+    arr.sort((a, b) => {
+      let cmp = 0
+      switch (sortKey) {
+        case 'ref':
+          cmp = a._id.localeCompare(b._id)
+          break
+        case 'amount':
+          cmp = a.amount - b.amount
+          break
+        case 'creditType':
+          cmp = (a.creditType || '').localeCompare(b.creditType || '')
+          break
+        case 'status':
+          cmp = a.status.localeCompare(b.status)
+          break
+        case 'updatedAt':
+          cmp = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
+          break
+        default:
+          break
+      }
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+    return arr
+  }, [filtered, sortKey, sortDir])
+
   const intro = user ? roleDossiersIntro(user.role) : { title: 'Dossiers crédit', lead: '' }
   const isClient = user?.role === 'CLIENT'
   const showApplicant = Boolean(user && !isClient)
@@ -170,7 +229,7 @@ export function DossiersPage() {
   const showChefAvisCol = user?.role === 'COMITE_CREDIT'
 
   return (
-    <div className="stb-page space-y-8">
+    <div className="stb-page stb-stack-tight">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
@@ -348,26 +407,66 @@ export function DossiersPage() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_20px_50px_-24px_rgba(15,23,42,0.2)]">
+      <div className="stb-table-shell">
         <div className="overflow-x-auto">
           <table
             className={`w-full text-left text-sm ${agentCompactCols ? 'min-w-[720px]' : 'min-w-[920px]'}`}
           >
-            <thead className="border-b border-slate-200 bg-slate-50/95 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <thead className="stb-table-head">
               <tr>
-                <th className="px-4 py-3.5">Référence</th>
+                <th className="px-4 py-3.5">
+                  <button
+                    type="button"
+                    onClick={() => toggleSort('ref')}
+                    className="inline-flex items-center gap-1 font-semibold text-slate-700 hover:text-blue-700"
+                  >
+                    Référence <TableSortIcon column="ref" activeKey={sortKey} dir={sortDir} />
+                  </button>
+                </th>
                 {showApplicant && (
                   <th className="px-4 py-3.5">{agentCompactCols ? 'Client' : 'Demandeur'}</th>
                 )}
                 {agentCompactCols ? (
                   <>
-                    <th className="px-4 py-3.5">Crédit</th>
-                    <th className="px-4 py-3.5">Montant</th>
+                    <th className="px-4 py-3.5">
+                      <button
+                        type="button"
+                        onClick={() => toggleSort('creditType')}
+                        className="inline-flex items-center gap-1 font-semibold text-slate-700 hover:text-blue-700"
+                      >
+                        Crédit <TableSortIcon column="creditType" activeKey={sortKey} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th className="px-4 py-3.5">
+                      <button
+                        type="button"
+                        onClick={() => toggleSort('amount')}
+                        className="inline-flex items-center gap-1 font-semibold text-slate-700 hover:text-blue-700"
+                      >
+                        Montant <TableSortIcon column="amount" activeKey={sortKey} dir={sortDir} />
+                      </button>
+                    </th>
                   </>
                 ) : (
                   <>
-                    <th className="px-4 py-3.5">Montant</th>
-                    <th className="px-4 py-3.5">Crédit</th>
+                    <th className="px-4 py-3.5">
+                      <button
+                        type="button"
+                        onClick={() => toggleSort('amount')}
+                        className="inline-flex items-center gap-1 font-semibold text-slate-700 hover:text-blue-700"
+                      >
+                        Montant <TableSortIcon column="amount" activeKey={sortKey} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th className="px-4 py-3.5">
+                      <button
+                        type="button"
+                        onClick={() => toggleSort('creditType')}
+                        className="inline-flex items-center gap-1 font-semibold text-slate-700 hover:text-blue-700"
+                      >
+                        Crédit <TableSortIcon column="creditType" activeKey={sortKey} dir={sortDir} />
+                      </button>
+                    </th>
                     <th className="px-4 py-3.5">Durée</th>
                     <th className="px-4 py-3.5">Taux</th>
                     {showRiskScoreCols && <th className="px-4 py-3.5">Indicateur</th>}
@@ -375,13 +474,29 @@ export function DossiersPage() {
                   </>
                 )}
                 {showChefAvisCol && <th className="max-w-[200px] px-4 py-3.5">Avis chef</th>}
-                <th className="px-4 py-3.5">Statut</th>
-                <th className="px-4 py-3.5">Date</th>
+                <th className="px-4 py-3.5">
+                  <button
+                    type="button"
+                    onClick={() => toggleSort('status')}
+                    className="inline-flex items-center gap-1 font-semibold text-slate-700 hover:text-blue-700"
+                  >
+                    Statut <TableSortIcon column="status" activeKey={sortKey} dir={sortDir} />
+                  </button>
+                </th>
+                <th className="px-4 py-3.5">
+                  <button
+                    type="button"
+                    onClick={() => toggleSort('updatedAt')}
+                    className="inline-flex items-center gap-1 font-semibold text-slate-700 hover:text-blue-700"
+                  >
+                    Dernière mise à jour <TableSortIcon column="updatedAt" activeKey={sortKey} dir={sortDir} />
+                  </button>
+                </th>
                 <th className="px-4 py-3.5 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map((row) => (
+              {sortedFiltered.map((row) => (
                 <tr key={row._id} className="transition hover:bg-blue-50/40">
                   <td className="px-4 py-3.5">
                     <Link

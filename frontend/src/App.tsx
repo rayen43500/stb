@@ -14,6 +14,9 @@ import { AdminPage } from './pages/AdminPage'
 import { AssistantPage } from './pages/AssistantPage'
 import { HomePage } from './pages/HomePage'
 import { AccountPage } from './pages/AccountPage'
+import { NotificationsPage } from './pages/NotificationsPage'
+import { HistoriquePage } from './pages/HistoriquePage'
+import { DocumentsHubPage } from './pages/DocumentsHubPage'
 
 export default function App() {
   return (
@@ -64,6 +67,30 @@ export default function App() {
             element={
               <RequireAuth>
                 <CreditDetailPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="notifications"
+            element={
+              <RequireAuth>
+                <NotificationsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="historique"
+            element={
+              <RequireAuth>
+                <HistoriquePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="documents"
+            element={
+              <RequireAuth>
+                <DocumentsHubPage />
               </RequireAuth>
             }
           />

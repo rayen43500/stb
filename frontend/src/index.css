@@ -1,13 +1,21 @@
 @import "tailwindcss";
 
+/* Design tokens — hiérarchie, équilibre, rythme vertical (institutionnel banque) */
 @theme {
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --color-stb-primary: #1d4ed8;
+  --color-stb-primary-hover: #1e40af;
   --color-stb-primary-deep: #1e3a8a;
   --color-stb-accent: #06b6d4;
   --color-stb-success: #10b981;
   --color-stb-warning: #f59e0b;
   --color-stb-danger: #ef4444;
+  --color-app-bg: #f8fafc;
+  --color-app-border: #e2e8f0;
+  --color-app-text: #0f172a;
+  --color-app-muted: #64748b;
+  --shadow-stb-card: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-stb-float: 0 12px 40px -16px rgba(15, 23, 42, 0.12);
 }
 
 @layer base {
@@ -15,49 +23,119 @@
     @apply antialiased;
   }
   body {
-    @apply min-h-screen bg-slate-50 text-slate-900;
+    @apply min-h-screen bg-[#F8FAFC] text-[#0F172A];
     font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  /* Focus visible — accessibilité sans surcharge visuelle */
+  :where(a, button, summary):focus-visible {
+    @apply outline-none ring-2 ring-[#1D4ED8]/40 ring-offset-2 ring-offset-[#F8FAFC];
   }
 }
 
 @layer components {
+  /* Rythme vertical entre blocs majeurs (macro whitespace) */
+  .stb-stack-page {
+    @apply space-y-12 sm:space-y-14 lg:space-y-16;
+  }
+  .stb-stack-tight {
+    @apply space-y-8 sm:space-y-10;
+  }
+
   .stb-page {
-    @apply mx-auto max-w-6xl px-4 py-6 sm:py-8;
-    animation: stb-fade-up 600ms ease-out both;
+    @apply mx-auto max-w-6xl px-4 py-6 sm:py-8 lg:py-10;
+    animation: stb-fade-up 560ms ease-out both;
   }
-  .stb-card {
-    @apply rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_24px_70px_-24px_rgba(15,23,42,0.25)];
-  }
-  .stb-card-muted {
-    @apply rounded-2xl border border-slate-200 bg-slate-50/80 p-6;
-  }
+
+  /* Niveau 1 — titre de page */
   .stb-h1 {
     @apply text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl;
   }
-  .stb-lead {
-    @apply mt-1 text-sm leading-relaxed text-slate-600;
+  /* Niveau 2 — titres de section dans la page */
+  .stb-h2 {
+    @apply text-lg font-semibold tracking-tight text-slate-900 sm:text-xl;
   }
+  /* Libellés de section (scan F-pattern, métadonnée hiérarchique) */
+  .stb-section-title {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500;
+  }
+  .stb-caption {
+    @apply text-xs leading-snug text-slate-500;
+  }
+
+  .stb-lead {
+    @apply mt-2 max-w-prose text-sm leading-relaxed text-slate-600 sm:text-[15px];
+  }
+
   .stb-label {
     @apply block text-xs font-medium uppercase tracking-wide text-slate-500;
   }
+
+  /* Cartes : figure — fond, ombre maîtrisée (charge cognitive réduite) */
+  .stb-card {
+    @apply rounded-2xl border border-slate-200/90 bg-white p-6 sm:p-7;
+    box-shadow: var(--shadow-stb-card);
+  }
+  .stb-card-muted {
+    @apply rounded-2xl border border-slate-200 bg-slate-50/90 p-6 sm:p-7;
+  }
+
+  .stb-panel {
+    @apply rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm sm:p-7;
+    box-shadow: 0 2px 16px -6px rgba(15, 23, 42, 0.06);
+  }
+  .stb-panel-accent {
+    @apply rounded-2xl border border-blue-200/70 bg-gradient-to-br from-blue-50/95 to-white p-6 shadow-sm sm:p-7;
+  }
+
+  /* KPI — groupement Gestalt + poids visuel uniforme */
+  .stb-kpi-card {
+    @apply rounded-xl border border-slate-200/80 bg-white p-4 ring-1 ring-slate-100;
+    box-shadow: 0 1px 12px -4px rgba(15, 23, 42, 0.06);
+  }
+  .stb-kpi-label {
+    @apply text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500;
+  }
+  .stb-kpi-value {
+    @apply mt-1 text-2xl font-semibold tabular-nums tracking-tight text-slate-900;
+  }
+
+  /* Tableaux — région commune + en-tête stable */
+  .stb-table-shell {
+    @apply overflow-hidden rounded-2xl border border-slate-200/90 bg-white;
+    box-shadow: var(--shadow-stb-card);
+  }
+  .stb-table-head {
+    @apply border-b border-slate-200 bg-slate-50/98 text-xs font-semibold uppercase tracking-wide text-slate-500;
+  }
+
   .stb-input {
     @apply mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-[15px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600/70 focus:ring-2 focus:ring-blue-500/20;
   }
+
   .stb-btn-primary {
-    @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-700 to-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-200/70 transition hover:from-blue-600 hover:to-blue-500 disabled:pointer-events-none disabled:opacity-45;
+    @apply inline-flex h-10 items-center justify-center rounded-[10px] bg-[#1D4ED8] px-4 text-sm font-semibold text-white shadow-sm transition duration-150 hover:bg-[#1E40AF] disabled:pointer-events-none disabled:opacity-45;
   }
   .stb-btn-secondary {
-    @apply inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50;
+    @apply inline-flex h-10 items-center justify-center rounded-[10px] border border-[#E2E8F0] bg-white px-4 text-sm font-medium text-[#0F172A] transition duration-150 hover:bg-[#F8FAFC];
+  }
+  .app-btn-ghost {
+    @apply inline-flex items-center justify-center rounded-[10px] border border-transparent bg-transparent text-[#64748B] transition duration-150 hover:bg-[#F1F5F9] hover:text-[#0F172A];
   }
   .stb-link {
     @apply font-medium text-blue-700 underline-offset-2 hover:text-blue-600 hover:underline;
+  }
+
+  /* Hero métier — une seule ombre directionnelle (hiérarchie) */
+  .stb-hero-role {
+    box-shadow: var(--shadow-stb-float);
   }
 }
 
 @keyframes stb-fade-up {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;

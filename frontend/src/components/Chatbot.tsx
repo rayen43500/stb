@@ -54,7 +54,7 @@ export function Chatbot() {
     <>
       <button
         type="button"
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-700 to-blue-600 text-2xl text-white shadow-[0_16px_40px_-12px_rgba(29,78,216,0.5)] ring-2 ring-blue-100 transition hover:scale-[1.03] hover:shadow-blue-400/50"
+        className="fixed bottom-6 right-6 z-50 flex h-11 w-11 items-center justify-center rounded-[10px] bg-[#1D4ED8] text-xs font-bold tracking-tight text-white shadow-md ring-1 ring-[#1D4ED8]/20 transition hover:bg-[#1E40AF]"
         aria-label="Ouvrir l’assistant STB"
         onClick={() => setOpen((o) => !o)}
       >
@@ -62,7 +62,7 @@ export function Chatbot() {
       </button>
       {open && (
         <div
-          className="fixed bottom-24 right-6 z-40 flex w-[min(100vw-1.5rem,24rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_70px_-20px_rgba(15,23,42,0.35)]"
+          className="fixed bottom-20 right-6 z-50 flex w-[min(100vw-1.5rem,24rem)] flex-col overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-lg shadow-slate-900/10"
           role="dialog"
           aria-modal="true"
         >

@@ -1,0 +1,18 @@
+/** Titres du topbar — une focalisation par écran (hiérarchie UX). */
+export function pageTitleForPath(pathname: string): string {
+  if (pathname === '/') return 'Accueil'
+  if (pathname.startsWith('/dashboard')) return 'Tableau de bord'
+  if (pathname.startsWith('/demande')) return 'Nouvelle demande'
+  if (pathname.startsWith('/dossiers/') && pathname !== '/dossiers') return 'Détail dossier'
+  if (pathname.startsWith('/dossiers')) return 'Dossiers'
+  if (pathname.startsWith('/notifications')) return 'Notifications'
+  if (pathname.startsWith('/historique')) return 'Historique'
+  if (pathname.startsWith('/documents')) return 'Documents'
+  if (pathname.startsWith('/simulation')) return 'Simulation crédit'
+  if (pathname.startsWith('/assistant')) return 'Assistant'
+  if (pathname.startsWith('/compte')) return 'Paramètres du compte'
+  if (pathname.startsWith('/admin')) return 'Administration'
+  if (pathname.startsWith('/login')) return 'Connexion'
+  if (pathname.startsWith('/register')) return 'Inscription'
+  return 'STB Crédits'
+}

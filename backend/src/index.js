@@ -17,6 +17,7 @@ import profileRoutes from "./routes/profileRoutes.js";
 import { ensureUploadDirs } from "./middleware/upload.js";
 
 const app = express();
+app.disable("x-powered-by");
 const PORT = Number(process.env.PORT) || 4000;
 
 ensureUploadDirs();

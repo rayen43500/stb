@@ -51,38 +51,12 @@ type NotifRow = {
 
 const staffRoles: Role[] = ['ADMIN', 'AGENT_BANCAIRE', 'CHEF_AGENCE', 'COMITE_CREDIT']
 
-function heroForRole(role: Role) {
-  const map: Record<Role, { bar: string; chip: string }> = {
-    CLIENT: {
-      bar: 'from-[#1e3a8a] via-[#1d4ed8] to-[#2563eb]',
-      chip: 'bg-white/15 text-white ring-white/25',
-    },
-    AGENT_BANCAIRE: {
-      bar: 'from-slate-800 via-cyan-900 to-slate-800',
-      chip: 'bg-cyan-400/20 text-cyan-50 ring-cyan-300/30',
-    },
-    CHEF_AGENCE: {
-      bar: 'from-indigo-950 via-indigo-800 to-indigo-950',
-      chip: 'bg-indigo-300/15 text-indigo-50 ring-indigo-200/25',
-    },
-    COMITE_CREDIT: {
-      bar: 'from-violet-950 via-violet-800 to-violet-950',
-      chip: 'bg-violet-300/15 text-violet-50 ring-violet-200/25',
-    },
-    ADMIN: {
-      bar: 'from-amber-900 via-amber-800 to-amber-950',
-      chip: 'bg-amber-300/15 text-amber-50 ring-amber-200/25',
-    },
-  }
-  return map[role]
-}
-
-function RoleHints({ role }: { role: Role }) {
+function workflowHints(role: Role): string[] {
   const hints: Record<Role, string[]> = {
     CLIENT: [
       'Créez un brouillon, ajoutez vos pièces puis soumettez pour lancer l’analyse.',
       'Consultez l’analyse de risque et l’historique des commentaires sur chaque dossier.',
-      'Complétez votre profil financier dans Compte & profil pour des simulations plus précises.',
+      'Complétez votre profil financier dans Paramètres pour des simulations plus précises.',
     ],
     AGENT_BANCAIRE: [
       'Traitez la file des dossiers : statuts, transitions et commentaires obligatoires.',
@@ -101,16 +75,7 @@ function RoleHints({ role }: { role: Role }) {
       'Surveillez les indicateurs agrégés (dossiers, taux d’acceptation).',
     ],
   }
-  return (
-    <ul className="mt-4 space-y-2 text-sm text-white/90">
-      {hints[role].map((line) => (
-        <li key={line} className="flex gap-2">
-          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-white/70" aria-hidden />
-          <span>{line}</span>
-        </li>
-      ))}
-    </ul>
-  )
+  return hints[role]
 }
 
 export function DashboardPage() {
@@ -191,41 +156,43 @@ export function DashboardPage() {
     )
   }
 
-  const hero = heroForRole(user.role)
-
   return (
-    <div className="stb-page space-y-10">
-      <section
-        className={`relative overflow-hidden rounded-2xl bg-gradient-to-br p-8 text-white shadow-[0_24px_70px_-24px_rgba(30,58,138,0.45)] ${hero.bar}`}
-      >
-        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-        <div className="relative">
-          <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${hero.chip}`}>
-            {roleLabelFr[user.role]}
-          </span>
-          <h1 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl">
-            Bienvenue{user.firstName ? `, ${user.firstName}` : ''}
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/85">{roleMission[user.role]}</p>
-          <RoleHints role={user.role} />
-          <div className="mt-6 flex flex-wrap gap-3">
+    <div className="stb-page stb-stack-page">
+      <section className="rounded-xl border border-[#E2E8F0] bg-white p-6 shadow-sm sm:p-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">{roleLabelFr[user.role]}</p>
+            <h1 className="mt-1 text-xl font-bold tracking-tight text-[#0F172A] sm:text-2xl">
+              Bienvenue{user.firstName ? `, ${user.firstName}` : ''}
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#64748B]">{roleMission[user.role]}</p>
+            <ul className="mt-5 grid gap-2 sm:grid-cols-2">
+              {workflowHints(user.role).map((line) => (
+                <li key={line} className="flex gap-2 text-sm text-[#475569]">
+                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#1D4ED8]" aria-hidden />
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
             <Link
               to="/compte"
-              className="inline-flex rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-blue-900 shadow-sm transition hover:bg-blue-50"
+              className="inline-flex items-center justify-center rounded-[10px] border border-[#E2E8F0] bg-white px-4 py-2 text-sm font-medium text-[#0F172A] shadow-sm transition hover:bg-[#F8FAFC]"
             >
-              Compte & profil
+              Paramètres
             </Link>
             {user.role === 'CLIENT' && (
               <>
                 <Link
                   to="/demande"
-                  className="inline-flex rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/30 transition hover:bg-white/15"
+                  className="inline-flex items-center justify-center rounded-[10px] bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1E40AF]"
                 >
                   Nouvelle demande
                 </Link>
                 <Link
                   to="/dossiers"
-                  className="inline-flex rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/30 transition hover:bg-white/15"
+                  className="inline-flex items-center justify-center rounded-[10px] border border-[#E2E8F0] px-4 py-2 text-sm font-medium text-[#0F172A] hover:bg-[#F8FAFC]"
                 >
                   Mes dossiers
                 </Link>
@@ -234,7 +201,7 @@ export function DashboardPage() {
             {user.role !== 'CLIENT' && (
               <Link
                 to="/dossiers"
-                className="inline-flex rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/30 transition hover:bg-white/15"
+                className="inline-flex items-center justify-center rounded-[10px] bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1E40AF]"
               >
                 Ouvrir les dossiers
               </Link>
@@ -243,10 +210,8 @@ export function DashboardPage() {
         </div>
       </section>
 
-      <section className="stb-card border-slate-200/90 bg-gradient-to-br from-slate-50 to-white">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">
-          Votre rôle — actions dans le workflow
-        </h2>
+      <section className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-6 shadow-sm">
+        <h2 className="stb-section-title text-slate-600">Votre rôle — actions dans le workflow</h2>
         <ul className="mt-4 space-y-2.5 text-sm text-slate-700">
           {roleTransitionHints(user.role).map((line) => (
             <li key={line} className="flex gap-2">
@@ -260,11 +225,11 @@ export function DashboardPage() {
       </section>
 
       <div>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Accès rapides</h2>
+        <h2 className="stb-section-title">Accès rapides</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Link
             to="/simulation"
-            className="stb-card-muted transition hover:border-blue-400/50 hover:shadow-lg hover:shadow-blue-200/50"
+            className="stb-card-muted transition hover:border-[#1D4ED8]/35 hover:bg-[#F8FAFC]"
           >
             <div className="text-xs font-semibold uppercase tracking-wide text-blue-700">Simulation</div>
             <div className="mt-2 font-medium text-slate-900">Mensualité & endettement</div>
@@ -282,7 +247,7 @@ export function DashboardPage() {
             <>
               <Link
                 to="/demande"
-                className="stb-card-muted transition hover:border-emerald-400/45 hover:shadow-lg hover:shadow-emerald-200/40"
+                className="stb-card-muted transition hover:border-[#10B981]/40 hover:bg-[#F8FAFC]"
               >
                 <div className="text-xs font-semibold uppercase tracking-wide text-emerald-800">Demande</div>
                 <div className="mt-2 font-medium text-slate-900">Nouveau dossier crédit</div>
@@ -290,7 +255,7 @@ export function DashboardPage() {
               </Link>
               <Link
                 to="/dossiers"
-                className="stb-card-muted transition hover:border-amber-400/45 hover:shadow-lg hover:shadow-amber-200/40"
+                className="stb-card-muted transition hover:border-[#F59E0B]/45 hover:bg-[#FFFBEB]"
               >
                 <div className="text-xs font-semibold uppercase tracking-wide text-amber-800">Mes dossiers</div>
                 <div className="mt-2 font-medium text-slate-900">Suivi & PDF</div>
@@ -301,7 +266,7 @@ export function DashboardPage() {
           {user.role !== 'CLIENT' && (
             <Link
               to="/dossiers"
-              className="stb-card-muted transition hover:border-blue-400/50 hover:shadow-lg hover:shadow-blue-200/50"
+              className="stb-card-muted transition hover:border-[#1D4ED8]/35 hover:bg-[#F8FAFC]"
             >
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Dossiers</div>
               <div className="mt-2 font-medium text-slate-900">
@@ -313,7 +278,7 @@ export function DashboardPage() {
           {user.role === 'ADMIN' && (
             <Link
               to="/admin"
-              className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-6 transition hover:border-amber-300 hover:shadow-md"
+              className="rounded-xl border border-amber-200 bg-[#FFFBEB] p-6 transition hover:border-amber-300 hover:bg-amber-50/80"
             >
               <div className="text-xs font-semibold uppercase tracking-wide text-amber-800">Administration</div>
               <div className="mt-2 font-medium text-amber-950">Utilisateurs & rôles</div>
@@ -322,7 +287,7 @@ export function DashboardPage() {
           )}
           <Link
             to="/compte"
-            className="stb-card-muted transition hover:border-slate-400/60 hover:shadow-md"
+            className="stb-card-muted transition hover:border-[#94A3B8]/50 hover:bg-[#F8FAFC]"
           >
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Profil</div>
             <div className="mt-2 font-medium text-slate-900">Adresse, téléphone, photo</div>
@@ -334,7 +299,7 @@ export function DashboardPage() {
       {staffRoles.includes(user.role) && (
         <section className="stb-card space-y-8">
           <div>
-            <h2 className="text-lg font-medium text-slate-900">Tableau de bord — {roleLabelFr[user.role]}</h2>
+            <h2 className="stb-h2">Tableau de bord — {roleLabelFr[user.role]}</h2>
             <p className="mt-1 text-sm text-slate-600">
               Indicateurs métier, derniers dossiers et répartitions (niveau de risque, type de crédit).
             </p>
@@ -343,7 +308,7 @@ export function DashboardPage() {
 
           {workspace && (
             <>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {Object.entries(workspace.kpis).map(([key, val]) => {
                   const label =
                     {
@@ -364,18 +329,16 @@ export function DashboardPage() {
                     }[key] || key
                   const isMoney = key.toLowerCase().includes('montant')
                   return (
-                    <div key={key} className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
-                      <div className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">
-                        {isMoney ? formatTnd(Number(val)) : val}
-                      </div>
+                    <div key={key} className="stb-kpi-card">
+                      <div className="stb-kpi-label">{label}</div>
+                      <div className="stb-kpi-value">{isMoney ? formatTnd(Number(val)) : val}</div>
                     </div>
                   )
                 })}
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
-                <h3 className="text-sm font-semibold text-slate-800">Notifications</h3>
+              <div className="stb-panel border-slate-200/90 bg-slate-50/60 p-5">
+                <h3 className="stb-section-title text-slate-700">Notifications</h3>
                 {notifsErr && <p className="mt-2 text-xs text-amber-700">{notifsErr}</p>}
                 {!notifsErr && notifs.length === 0 && (
                   <p className="mt-2 text-sm text-slate-600">
@@ -413,16 +376,16 @@ export function DashboardPage() {
               </div>
 
               {workspace.acceptanceRate != null && (
-                <p className="text-sm text-slate-600">
+                <p className="stb-caption text-slate-600 sm:text-sm">
                   Taux d&apos;acceptation (sur dossiers décidés) :{' '}
                   <strong className="text-slate-900">{workspace.acceptanceRate} %</strong>
                 </p>
               )}
 
-              <div className="grid gap-8 lg:grid-cols-2">
+              <div className="grid gap-10 lg:grid-cols-2">
                 {chartData && (
                   <div className="max-h-72">
-                    <h3 className="mb-3 text-sm font-semibold text-slate-800">Dossiers par statut</h3>
+                    <h3 className="mb-4 stb-section-title text-slate-700">Dossiers par statut</h3>
                     <Bar
                       data={chartData}
                       options={{
@@ -438,7 +401,7 @@ export function DashboardPage() {
                 )}
                 {riskChart && (
                   <div className="max-h-72">
-                    <h3 className="mb-3 text-sm font-semibold text-slate-800">Répartition des niveaux de risque</h3>
+                    <h3 className="mb-4 stb-section-title text-slate-700">Répartition des niveaux de risque</h3>
                     <Doughnut
                       data={riskChart}
                       options={{
@@ -452,7 +415,7 @@ export function DashboardPage() {
 
               {typeChart && (
                 <div className="max-h-64">
-                  <h3 className="mb-3 text-sm font-semibold text-slate-800">Crédits par type</h3>
+                  <h3 className="mb-4 stb-section-title text-slate-700">Crédits par type</h3>
                   <Doughnut
                     data={typeChart}
                     options={{
@@ -464,10 +427,10 @@ export function DashboardPage() {
               )}
 
               <div>
-                <h3 className="text-sm font-semibold text-slate-800">Derniers dossiers</h3>
-                <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200">
+                <h3 className="stb-section-title text-slate-700">Derniers dossiers</h3>
+                <div className="stb-table-shell mt-4">
                   <table className="min-w-full text-left text-sm">
-                    <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                    <thead className="stb-table-head">
                       <tr>
                         <th className="px-3 py-2">Client</th>
                         <th className="px-3 py-2">Montant</th>

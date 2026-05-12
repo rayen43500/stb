@@ -246,13 +246,13 @@ export function CreditDetailPage() {
   const dv = credit.documentVerification || {}
 
   return (
-    <div className="stb-page space-y-8">
+    <div className="stb-page stb-stack-tight">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <Link to="/dossiers" className="text-sm text-blue-700 hover:underline">
             ← Retour liste
           </Link>
-          <h1 className="mt-2 text-2xl font-semibold text-slate-900">Dossier {credit._id.slice(-8)}</h1>
+          <h1 className="stb-h1 mt-2">Dossier {credit._id.slice(-8)}</h1>
           <p className="text-slate-600">
             Statut :{' '}
             <span
@@ -273,10 +273,10 @@ export function CreditDetailPage() {
         </button>
       </div>
 
-      <section className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50/80 to-white p-6 shadow-sm">
-        <h2 className="text-lg font-medium text-slate-900">Parcours du dossier</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Soumis → Vérification agent → Scoring → Validation chef → Comité → Décision finale
+      <section className="stb-panel-accent">
+        <h2 className="stb-h2">Parcours du dossier</h2>
+        <p className="stb-caption mt-2 max-w-prose sm:text-sm">
+          Soumis → Vérification agent → Analyse de risque → Validation chef → Comité → Décision finale
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-2">
           {WORKFLOW_STEPS.map((step, i) => {
@@ -304,8 +304,8 @@ export function CreditDetailPage() {
 
       {applicant && (
         <div className="grid gap-6 lg:grid-cols-2">
-          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-medium text-slate-900">Informations client</h2>
+          <section className="stb-panel">
+            <h2 className="stb-h2">Informations client</h2>
             <dl className="mt-4 space-y-2 text-sm">
               <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
                 <dt className="text-slate-500">Nom</dt>
@@ -336,8 +336,8 @@ export function CreditDetailPage() {
             </dl>
           </section>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-medium text-slate-900">Informations financières</h2>
+          <section className="stb-panel">
+            <h2 className="stb-h2">Informations financières</h2>
             <dl className="mt-4 space-y-2 text-sm">
               <div className="flex justify-between gap-4 border-b border-slate-100 py-2">
                 <dt className="text-slate-500">Revenus nets (TND)</dt>
@@ -375,8 +375,8 @@ export function CreditDetailPage() {
         </div>
       )}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-medium text-slate-900">Crédit demandé</h2>
+      <section className="stb-panel">
+        <h2 className="stb-h2">Crédit demandé</h2>
         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
           <div>
             <dt className="text-slate-500">Montant</dt>
@@ -419,15 +419,15 @@ export function CreditDetailPage() {
       </section>
 
       {role === 'COMITE_CREDIT' && chefAvis && (
-        <section className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-6">
-          <h2 className="text-lg font-medium text-indigo-950">Avis chef d&apos;agence</h2>
+        <section className="stb-panel border-indigo-200 bg-indigo-50/50">
+          <h2 className="stb-h2 text-indigo-950">Avis chef d&apos;agence</h2>
           <p className="mt-2 whitespace-pre-wrap text-sm text-indigo-900">{chefAvis}</p>
         </section>
       )}
 
       {credit.scoring?.score != null && (
-        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-slate-900">Analyse de risque</h2>
+        <section className="stb-panel">
+          <h2 className="stb-h2">Analyse de risque</h2>
           <div className="mt-4 overflow-x-auto">
             <table className="min-w-full text-sm">
               <tbody>
@@ -493,8 +493,8 @@ export function CreditDetailPage() {
       )}
 
       {canVerifyDocs && (
-        <section className="rounded-xl border border-amber-200 bg-amber-50/40 p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-slate-900">Vérification des pièces (agent)</h2>
+        <section className="stb-panel border-amber-200 bg-amber-50/40">
+          <h2 className="stb-h2">Vérification des pièces (agent)</h2>
           <p className="mt-1 text-sm text-slate-600">
             Cochez les pièces conformes après contrôle (CIN, fiche de paie, contrat, relevé).
           </p>
@@ -524,8 +524,8 @@ export function CreditDetailPage() {
       )}
 
       {allowed.length > 0 && (
-        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-slate-900">Action métier</h2>
+        <section className="stb-panel">
+          <h2 className="stb-h2">Action métier</h2>
           <p className="text-sm text-slate-600">
             Transitions autorisées pour votre rôle ({user?.role}). Commentaire obligatoire pour traçabilité.
           </p>
@@ -566,8 +566,8 @@ export function CreditDetailPage() {
         </section>
       )}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-medium text-slate-900">Documents justificatifs</h2>
+      <section className="stb-panel">
+        <h2 className="stb-h2">Documents justificatifs</h2>
         {isClient && (
           <form className="mt-4 flex flex-wrap items-end gap-4" onSubmit={uploadDoc}>
             <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
@@ -601,8 +601,8 @@ export function CreditDetailPage() {
         </ul>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-medium text-slate-900">Historique & traçabilité</h2>
+      <section className="stb-panel">
+        <h2 className="stb-h2">Historique & traçabilité</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
@@ -632,8 +632,8 @@ export function CreditDetailPage() {
         )}
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
-        <h2 className="text-lg font-medium text-slate-900">Commentaires récents</h2>
+      <section className="stb-panel bg-slate-50/90">
+        <h2 className="stb-h2">Commentaires récents</h2>
         <ul className="mt-4 space-y-3 text-sm">
           {sortedComments.map((c, i) => (
             <li key={c._id || i} className="rounded-lg bg-white px-4 py-3 ring-1 ring-slate-200">
