@@ -111,6 +111,9 @@ export async function handleChatMessage(req, res, next) {
     const raw = String(req.body?.text || "").trim();
     const t = raw.toLowerCase();
     const geminiEntities = await extractEntitiesWithGemini(raw);
+    console.info(
+      `[Chat NLP] Gemini ${geminiEntities ? "used" : "not used"} for message.`
+    );
     const entities = mergeRegexAndGemini(parseCreditEntities(raw), geminiEntities);
 
     const user = req.user;
