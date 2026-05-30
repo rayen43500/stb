@@ -21,6 +21,14 @@ export type SidebarLink = {
   end?: boolean
 }
 
+const staffRest: SidebarLink[] = [
+  { to: '/historique', label: 'Historique', Icon: History },
+  { to: '/notifications', label: 'Notifications', Icon: Bell },
+  { to: '/simulation', label: 'Simulation', Icon: Calculator },
+  { to: '/assistant', label: 'Assistant', Icon: MessageSquare },
+  { to: '/compte', label: 'Paramètres', Icon: User },
+]
+
 /** Navigation principale application — workflow-first, dense. */
 export function getSidebarLinks(role: Role): SidebarLink[] {
   const core: SidebarLink[] = [
@@ -34,37 +42,35 @@ export function getSidebarLinks(role: Role): SidebarLink[] {
       { to: '/demande', label: 'Nouvelle demande', Icon: FilePlus2 },
       { to: '/dossiers', label: 'Mes dossiers', Icon: FolderKanban },
       { to: '/documents', label: 'Documents', Icon: FileText },
-      { to: '/historique', label: 'Historique', Icon: History },
-      { to: '/notifications', label: 'Notifications', Icon: Bell },
-      { to: '/simulation', label: 'Simulation', Icon: Calculator },
-      { to: '/assistant', label: 'Assistant', Icon: MessageSquare },
-      { to: '/compte', label: 'Paramètres', Icon: User },
+      ...staffRest,
     ]
   }
 
-  const staffRest: SidebarLink[] = [
-    { to: '/dossiers', label: 'Dossiers', Icon: FolderKanban },
-    { to: '/documents', label: 'Documents', Icon: FileText },
-    { to: '/historique', label: 'Historique', Icon: History },
-    { to: '/notifications', label: 'Notifications', Icon: Bell },
-    { to: '/simulation', label: 'Simulation', Icon: Calculator },
-    { to: '/assistant', label: 'Assistant', Icon: MessageSquare },
-    { to: '/compte', label: 'Paramètres', Icon: User },
-  ]
+  if (role === 'CHEF_AGENCE') {
+    return [
+      ...core,
+      { to: '/dossiers', label: 'Dossiers', Icon: FolderKanban },
+      { to: '/chef/comptes', label: 'Gestion agence', Icon: Shield },
+      { to: '/documents', label: 'Documents', Icon: FileText },
+      ...staffRest,
+    ]
+  }
 
   if (role === 'ADMIN') {
     return [
       ...core,
       { to: '/dossiers', label: 'Dossiers', Icon: FolderKanban },
+      { to: '/chef/comptes', label: 'Gestion agence', Icon: Shield },
       { to: '/documents', label: 'Documents', Icon: FileText },
-      { to: '/historique', label: 'Historique', Icon: History },
-      { to: '/notifications', label: 'Notifications', Icon: Bell },
       { to: '/admin', label: 'Administration', Icon: Shield },
-      { to: '/simulation', label: 'Simulation', Icon: Calculator },
-      { to: '/assistant', label: 'Assistant', Icon: MessageSquare },
-      { to: '/compte', label: 'Paramètres', Icon: User },
+      ...staffRest,
     ]
   }
 
-  return [...core, ...staffRest]
+  return [
+    ...core,
+    { to: '/dossiers', label: 'Dossiers', Icon: FolderKanban },
+    { to: '/documents', label: 'Documents', Icon: FileText },
+    ...staffRest,
+  ]
 }

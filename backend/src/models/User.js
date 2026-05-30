@@ -9,10 +9,23 @@ export const ROLES = {
   ADMIN: "ADMIN",
 };
 
+export const ACCOUNT_STATUSES = ["PENDING", "ACTIVE", "REJECTED"];
+
 const userSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    passwordHash: { type: String, required: true },
+    passwordHash: { type: String },
+    accountStatus: {
+      type: String,
+      enum: ACCOUNT_STATUSES,
+      default: "ACTIVE",
+    },
+    dateOfBirth: { type: Date },
+    activationCode: { type: String },
+    activationCodeExpires: { type: Date },
+    rejectionReason: { type: String, trim: true },
+    /** Matricule — personnel banque */
+    matricule: { type: String, trim: true },
     role: {
       type: String,
       enum: Object.values(ROLES),
@@ -34,9 +47,17 @@ const userSchema = new mongoose.Schema(
       agencyName: { type: String, trim: true },
     },
     clientProfile: {
+      maritalStatus: { type: String, trim: true },
+      profession: { type: String, trim: true },
+      employerName: { type: String, trim: true },
       monthlyIncome: Number,
       monthlyCharges: Number,
-      contractType: { type: String, enum: ["CDI", "CDD", "INDEPENDANT"] },
+      existingCredits: Number,
+      additionalIncome: Number,
+      contractType: {
+        type: String,
+        enum: ["CDI", "CDD", "FONCTIONNAIRE", "INDEPENDANT", "AUTRE"],
+      },
       seniorityMonths: { type: Number, default: 0 },
       priorDefaults: { type: Number, default: 0 },
       bankingIncidents: { type: Number, default: 0 },
@@ -54,6 +75,9 @@ userSchema.methods.toSafeJSON = function toSafeJSON() {
     id: this._id.toString(),
     email: this.email,
     role: this.role,
+    accountStatus: this.accountStatus || "ACTIVE",
+    dateOfBirth: this.dateOfBirth ? this.dateOfBirth.toISOString().slice(0, 10) : undefined,
+    matricule: this.matricule,
     firstName: this.firstName,
     lastName: this.lastName,
     phone: this.phone,

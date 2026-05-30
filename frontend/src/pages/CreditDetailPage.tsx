@@ -32,6 +32,8 @@ type ApplicantInfo = {
     monthlyCharges?: number
     contractType?: string
     seniorityMonths?: number
+    priorDefaults?: number
+    bankingIncidents?: number
   }
 }
 
@@ -42,6 +44,7 @@ type CreditDoc = {
   durationMonths: number
   annualRatePercent: number
   creditType?: string
+  creditPurpose?: string
   monthlyPayment?: number
   debtRatioPercent?: number | null
   documentVerification?: {
@@ -101,6 +104,7 @@ export function CreditDetailPage() {
   const [docError, setDocError] = useState<string | null>(null)
   const [metaError, setMetaError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [incidents, setIncidents] = useState({ priorDefaults: 0, bankingIncidents: 0 })
 
   const loadDocuments = useCallback(async () => {
     if (!id) return
@@ -123,6 +127,13 @@ export function CreditDetailPage() {
     setCredit(c)
     setAllowed(a.allowedNext)
     setNextStatus((prev) => (a.allowedNext.length && !a.allowedNext.includes(prev) ? a.allowedNext[0] : prev))
+    const app = c.applicantId && typeof c.applicantId === 'object' ? c.applicantId : null
+    if (app?.clientProfile) {
+      setIncidents({
+        priorDefaults: app.clientProfile.priorDefaults ?? 0,
+        bankingIncidents: app.clientProfile.bankingIncidents ?? 0,
+      })
+    }
     await loadDocuments()
   }, [id, loadDocuments])
 
@@ -165,7 +176,12 @@ export function CreditDetailPage() {
     }
   }
 
-  async function patchMeta(partial: { creditType?: string; documentVerification?: Partial<CreditDoc['documentVerification']> }) {
+  async function patchMeta(partial: {
+    creditType?: string
+    documentVerification?: Partial<CreditDoc['documentVerification']>
+    bankingIncidents?: number
+    priorDefaults?: number
+  }) {
     if (!id) return
     setLoading(true)
     setMetaError(null)
@@ -182,6 +198,32 @@ export function CreditDetailPage() {
   async function dlPdf() {
     if (!id) return
     await downloadBlob(`/credits/${id}/amortissement.pdf`, `amortissement-${id}.pdf`)
+  }
+
+  async function dlContrat() {
+    if (!id) return
+    await downloadBlob(`/credits/${id}/contrat.pdf`, `contrat-${id}.pdf`)
+  }
+
+  async function dlDecision() {
+    if (!id) return
+    await downloadBlob(`/credits/${id}/decision.pdf`, `decision-${id}.pdf`)
+  }
+
+  async function quickTransition(target: string, defaultComment: string) {
+    if (!id) return
+    const c = comment.trim() || defaultComment
+    setLoading(true)
+    setError(null)
+    try {
+      await api.patch(`/credits/${id}/status`, { nextStatus: target, comment: c })
+      setComment('')
+      await refresh()
+    } catch (err: unknown) {
+      setError(axiosMessage(err) || 'Transition refusée')
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function dlDocument(docId: string, name: string) {
@@ -269,9 +311,29 @@ export function CreditDetailPage() {
           onClick={() => dlPdf()}
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
         >
-          Télécharger tableau d&apos;amortissement (PDF)
+          Tableau d&apos;amortissement
         </button>
+        {credit.status === 'APPROUVÉ' && (
+          <>
+            <button type="button" onClick={() => dlContrat()} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white hover:bg-emerald-600">
+              Contrat PDF
+            </button>
+            <button type="button" onClick={() => dlDecision()} className="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50">
+              Fiche décision
+            </button>
+          </>
+        )}
       </div>
+
+      {credit.status === 'À_MODIFIER' && isClient && (
+        <section className="stb-panel border-amber-300 bg-amber-50">
+          <h2 className="stb-h2 text-amber-950">Modification demandée</h2>
+          <p className="mt-2 text-sm text-amber-900">
+            L&apos;agence a demandé des corrections. Consultez les commentaires ci-dessous, mettez à jour vos pièces
+            puis resoumettez le dossier via « Action métier ».
+          </p>
+        </section>
+      )}
 
       <section className="stb-panel-accent">
         <h2 className="stb-h2">Parcours du dossier</h2>
@@ -394,6 +456,12 @@ export function CreditDetailPage() {
             <dt className="text-slate-500">Mensualité (simulation)</dt>
             <dd className="tabular-nums">{credit.monthlyPayment != null ? formatTnd(credit.monthlyPayment) : '—'}</dd>
           </div>
+          {credit.creditPurpose && (
+            <div className="sm:col-span-2">
+              <dt className="text-slate-500">Objet du crédit</dt>
+              <dd>{credit.creditPurpose}</dd>
+            </div>
+          )}
         </dl>
 
         {canEditMetaType && (
@@ -499,12 +567,15 @@ export function CreditDetailPage() {
             Cochez les pièces conformes après contrôle (CIN, fiche de paie, contrat, relevé).
           </p>
           <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-            {DOC_CHECKS.map(({ key, label }) => (
-              <li key={key} className="flex items-center gap-3 rounded-lg bg-white px-4 py-3 ring-1 ring-slate-200">
+            {DOC_CHECKS.map(({ key, label }) => {
+              const checked = Boolean(dv[key])
+              const tone = checked ? 'ring-emerald-300 bg-emerald-50' : 'ring-orange-300 bg-orange-50'
+              return (
+              <li key={key} className={`flex items-center gap-3 rounded-lg px-4 py-3 ring-1 ${tone}`}>
                 <input
                   type="checkbox"
                   id={key}
-                  checked={Boolean(dv[key])}
+                  checked={checked}
                   onChange={(e) =>
                     patchMeta({
                       documentVerification: { ...dv, [key]: e.target.checked },
@@ -514,11 +585,64 @@ export function CreditDetailPage() {
                   className="h-4 w-4 rounded border-slate-300 text-blue-700"
                 />
                 <label htmlFor={key} className="text-sm font-medium text-slate-800">
-                  {label}
+                  {label} {checked ? '✓' : '— à vérifier'}
                 </label>
               </li>
-            ))}
+            )})}
           </ul>
+
+          <h3 className="mt-6 text-sm font-semibold text-slate-800">Incidents de paiement (alimente le scoring IA)</h3>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <label className="text-sm text-slate-600">
+              Retards / défauts antérieurs
+              <input
+                type="number"
+                min={0}
+                className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2"
+                value={incidents.priorDefaults}
+                onChange={(e) => setIncidents((i) => ({ ...i, priorDefaults: Number(e.target.value) }))}
+              />
+            </label>
+            <label className="text-sm text-slate-600">
+              Incidents bancaires (rejets chèque, etc.)
+              <input
+                type="number"
+                min={0}
+                className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2"
+                value={incidents.bankingIncidents}
+                onChange={(e) => setIncidents((i) => ({ ...i, bankingIncidents: Number(e.target.value) }))}
+              />
+            </label>
+          </div>
+          <button
+            type="button"
+            disabled={loading}
+            className="mt-3 rounded-lg bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700"
+            onClick={() => patchMeta(incidents)}
+          >
+            Enregistrer incidents
+          </button>
+
+          {role === 'AGENT_BANCAIRE' && credit.status === 'EN_ANALYSE' && (
+            <div className="mt-6 flex flex-wrap gap-3 border-t border-amber-200 pt-4">
+              <button
+                type="button"
+                disabled={loading}
+                className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600"
+                onClick={() => quickTransition('EN_VALIDATION_CHEF', 'Dossier complet et vérifié — transmission au chef.')}
+              >
+                Transmettre au chef
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                className="rounded-lg border border-amber-600 px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
+                onClick={() => quickTransition('À_MODIFIER', 'Documents manquants ou incomplets — renvoi au client.')}
+              >
+                Renvoyer au client
+              </button>
+            </div>
+          )}
           {metaError && <p className="mt-3 text-sm text-red-600">{metaError}</p>}
         </section>
       )}

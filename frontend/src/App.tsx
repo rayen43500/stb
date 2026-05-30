@@ -17,6 +17,8 @@ import { AccountPage } from './pages/AccountPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { HistoriquePage } from './pages/HistoriquePage'
 import { DocumentsHubPage } from './pages/DocumentsHubPage'
+import { ActivatePage } from './pages/ActivatePage'
+import { ChefComptesPage } from './pages/ChefComptesPage'
 
 export default function App() {
   return (
@@ -26,6 +28,7 @@ export default function App() {
           <Route index element={<HomePage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
+          <Route path="activate" element={<ActivatePage />} />
           <Route path="simulation" element={<SimulationPage />} />
           <Route path="assistant" element={<AssistantPage />} />
           <Route
@@ -100,6 +103,16 @@ export default function App() {
               <RequireAuth>
                 <RequireRole roles={['ADMIN']}>
                   <AdminPage />
+                </RequireRole>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="chef/comptes"
+            element={
+              <RequireAuth>
+                <RequireRole roles={['CHEF_AGENCE', 'ADMIN']}>
+                  <ChefComptesPage />
                 </RequireRole>
               </RequireAuth>
             }

@@ -2,11 +2,14 @@ import { Router } from "express";
 import {
   simulate,
   createDraft,
+  updateDraft,
   listMine,
   getOne,
   transition,
   allowedNext,
   amortissementPdf,
+  contratPdf,
+  decisionPdf,
   updateCreditMeta,
 } from "../controllers/creditController.js";
 import { authRequired, loadUser, requireRoles } from "../middleware/auth.js";
@@ -20,8 +23,11 @@ r.use(authRequired, loadUser);
 
 r.get("/:id/allowed-next", allowedNext);
 r.get("/:id/amortissement.pdf", amortissementPdf);
+r.get("/:id/contrat.pdf", contratPdf);
+r.get("/:id/decision.pdf", decisionPdf);
 
 r.post("/", requireRoles(ROLES.CLIENT), createDraft);
+r.patch("/:id/draft", requireRoles(ROLES.CLIENT), updateDraft);
 r.get("/", listMine);
 r.patch(
   "/:id/meta",

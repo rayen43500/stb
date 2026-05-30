@@ -17,11 +17,13 @@ type AuthState = {
   login: (email: string, password: string) => Promise<void>
   register: (payload: {
     email: string
-    password: string
     firstName?: string
     lastName?: string
     phone?: string
+    nationalId?: string
+    dateOfBirth?: string
   }) => Promise<void>
+  activate: (email: string, code: string, password: string) => Promise<void>
   logout: () => void
   refreshMe: () => Promise<void>
 }
@@ -68,18 +70,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (payload: {
       email: string
-      password: string
       firstName?: string
       lastName?: string
       phone?: string
+      nationalId?: string
+      dateOfBirth?: string
     }) => {
-      const { data } = await api.post<{ token: string; user: SafeUser }>('/auth/register', payload)
-      localStorage.setItem('stb_token', data.token)
-      setToken(data.token)
-      setUser(data.user)
+      await api.post('/auth/register', payload)
     },
     [],
   )
+
+  const activate = useCallback(async (email: string, code: string, password: string) => {
+    const { data } = await api.post<{ token: string; user: SafeUser }>('/auth/activate', {
+      email,
+      code,
+      password,
+    })
+    localStorage.setItem('stb_token', data.token)
+    setToken(data.token)
+    setUser(data.user)
+  }, [])
 
   const logout = useCallback(() => {
     localStorage.removeItem('stb_token')
@@ -94,10 +105,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       login,
       register,
+      activate,
       logout,
       refreshMe,
     }),
-    [token, user, loading, login, register, logout, refreshMe],
+    [token, user, loading, login, register, activate, logout, refreshMe],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

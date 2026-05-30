@@ -9,8 +9,20 @@ export async function updateMyProfile(req, res, next) {
       "firstName",
       "lastName",
       "phone",
+      "nationalId",
+      "addressLine1",
+      "addressLine2",
+      "city",
+      "postalCode",
+      "country",
+      "dateOfBirth",
+      "maritalStatus",
+      "profession",
+      "employerName",
       "monthlyIncome",
       "monthlyCharges",
+      "existingCredits",
+      "additionalIncome",
       "contractType",
       "seniorityMonths",
       "priorDefaults",
@@ -18,8 +30,13 @@ export async function updateMyProfile(req, res, next) {
     ];
     const body = req.body || {};
     const profileKeys = new Set([
+      "maritalStatus",
+      "profession",
+      "employerName",
       "monthlyIncome",
       "monthlyCharges",
+      "existingCredits",
+      "additionalIncome",
       "contractType",
       "seniorityMonths",
       "priorDefaults",
@@ -31,6 +48,8 @@ export async function updateMyProfile(req, res, next) {
       if (profileKeys.has(key)) {
         req.user.clientProfile = req.user.clientProfile || {};
         req.user.clientProfile[key] = body[key];
+      } else if (key === "dateOfBirth") {
+        req.user.dateOfBirth = body[key] ? new Date(body[key]) : undefined;
       } else {
         req.user[key] = body[key];
       }

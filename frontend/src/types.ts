@@ -9,6 +9,9 @@ export type SafeUser = {
   id: string
   email: string
   role: Role
+  accountStatus?: 'PENDING' | 'ACTIVE' | 'REJECTED'
+  dateOfBirth?: string
+  matricule?: string
   firstName?: string
   lastName?: string
   phone?: string
@@ -22,8 +25,13 @@ export type SafeUser = {
   hasAvatar?: boolean
   updatedAt?: string
   clientProfile?: {
+    maritalStatus?: string
+    profession?: string
+    employerName?: string
     monthlyIncome?: number
     monthlyCharges?: number
+    existingCredits?: number
+    additionalIncome?: number
     contractType?: string
     seniorityMonths?: number
     priorDefaults?: number

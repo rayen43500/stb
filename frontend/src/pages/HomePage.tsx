@@ -162,9 +162,18 @@ function PublicHome() {
   )
 }
 
+type ClientStats = {
+  demandesActives: number
+  enAttente: number
+  approuvees: number
+  montantTotal: number
+  total: number
+}
+
 /** Tableau de bord client — données réelles, workflow, activité, tableau. */
 function ClientHome({ user }: { user: SafeUser }) {
   const [credits, setCredits] = useState<CreditLite[]>([])
+  const [stats, setStats] = useState<ClientStats | null>(null)
   const [notifs, setNotifs] = useState<NotifRow[]>([])
   const [loading, setLoading] = useState(true)
   const [loadErr, setLoadErr] = useState<string | null>(null)
@@ -172,10 +181,15 @@ function ClientHome({ user }: { user: SafeUser }) {
 
   useEffect(() => {
     setLoading(true)
-    Promise.all([api.get<CreditLite[]>('/credits/'), api.get<NotifRow[]>('/notifications')])
-      .then(([cr, nt]) => {
+    Promise.all([
+      api.get<CreditLite[]>('/credits/'),
+      api.get<NotifRow[]>('/notifications'),
+      api.get<ClientStats>('/stats/client'),
+    ])
+      .then(([cr, nt, st]) => {
         setCredits(cr.data)
         setNotifs(nt.data.slice(0, 12))
+        setStats(st.data)
         setLoadErr(null)
       })
       .catch(() => setLoadErr('Données temporairement indisponibles'))
@@ -267,23 +281,24 @@ function ClientHome({ user }: { user: SafeUser }) {
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiTile
               icon={FolderOpen}
-              label="Dossiers en cours"
-              value={kpis.enCircuit}
-              hint={
-                kpis.cetteSemaine > 0
-                  ? `${kpis.cetteSemaine} mise${kpis.cetteSemaine > 1 ? 's' : ''} à jour cette semaine`
-                  : 'Aucune mise à jour cette semaine'
-              }
+              label="Demandes actives"
+              value={stats?.demandesActives ?? kpis.enCircuit}
+              hint={`${stats?.enAttente ?? 0} en attente de décision`}
             />
-            <KpiTile icon={CheckCircle2} label="Crédits accordés" value={kpis.approuves} tone="emerald" />
+            <KpiTile
+              icon={LayoutDashboard}
+              label="Montant crédits approuvés"
+              value={stats ? formatTnd(stats.montantTotal) : '—'}
+              hint="Total des dossiers accordés"
+            />
+            <KpiTile icon={CheckCircle2} label="Approuvées" value={stats?.approuvees ?? kpis.approuves} tone="emerald" />
             <KpiTile
               icon={AlertCircle}
-              label="Actions requises"
-              value={kpis.actionsRequises}
-              hint={kpis.actionsRequises ? 'Compléments demandés par l’agence' : 'Aucune action en attente'}
+              label="En attente / actions"
+              value={stats?.enAttente ?? kpis.actionsRequises}
+              hint={kpis.actionsRequises ? `${kpis.actionsRequises} complément(s) demandé(s)` : 'Suivi agence en cours'}
               tone="amber"
             />
-            <KpiTile icon={LayoutDashboard} label="Total dossiers" value={kpis.total} hint={`${kpis.brouillons} brouillon(s)`} />
           </section>
 
           {/* Workflow */}

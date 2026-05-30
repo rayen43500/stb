@@ -40,6 +40,7 @@ const demoUsers = [
     role: ROLES.AGENT_BANCAIRE,
     firstName: "Agent",
     lastName: "Démo",
+    matricule: "AGT-001",
     staffProfile: { agencyName: "Agence Tunis Centre" },
   },
   {
@@ -48,6 +49,7 @@ const demoUsers = [
     role: ROLES.CHEF_AGENCE,
     firstName: "Chef",
     lastName: "Agence",
+    matricule: "CHF-001",
     staffProfile: { agencyName: "Agence Tunis Centre" },
   },
   {
@@ -71,9 +73,13 @@ async function run() {
       email: u.email,
       passwordHash,
       role: u.role,
+      accountStatus: "ACTIVE",
       firstName: u.firstName,
       lastName: u.lastName,
+      nationalId: u.nationalId,
       clientProfile: u.clientProfile,
+      staffProfile: u.staffProfile,
+      matricule: u.matricule,
     });
     console.log("Créé:", u.email, u.role);
   }

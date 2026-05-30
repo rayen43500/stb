@@ -14,5 +14,7 @@ export function pageTitleForPath(pathname: string): string {
   if (pathname.startsWith('/admin')) return 'Administration'
   if (pathname.startsWith('/login')) return 'Connexion'
   if (pathname.startsWith('/register')) return 'Inscription'
+  if (pathname.startsWith('/activate')) return 'Activation compte'
+  if (pathname.startsWith('/chef/comptes')) return 'Gestion agence'
   return 'STB Crédits'
 }

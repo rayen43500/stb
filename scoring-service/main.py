@@ -123,6 +123,12 @@ def compute_score(p: ScoreRequest) -> ScoreResponse:
     elif ct == "INDEPENDANT":
         score -= 4
         factors.append("Profil indépendant")
+    elif ct == "FONCTIONNAIRE":
+        score += 10
+        factors.append("Fonctionnaire — stabilité de l'emploi")
+    elif ct == "AUTRE":
+        score -= 2
+        factors.append("Type de contrat atypique")
 
     if p.seniority_months >= 36:
         score += 8

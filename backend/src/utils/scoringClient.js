@@ -97,6 +97,12 @@ function fallbackScore(p) {
   } else if (ct === "INDEPENDANT") {
     score -= 4;
     factors.push("Profil indépendant");
+  } else if (ct === "FONCTIONNAIRE") {
+    score += 10;
+    factors.push("Fonctionnaire — stabilité de l'emploi");
+  } else if (ct === "AUTRE") {
+    score -= 2;
+    factors.push("Type de contrat atypique");
   }
 
   const sen = p.seniority_months || 0;

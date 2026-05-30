@@ -28,6 +28,9 @@ export async function updateProfile(req, res, next) {
     for (const key of fields) {
       if (body[key] !== undefined) u[key] = trimOrUndef(body[key]);
     }
+    if (body.dateOfBirth !== undefined) {
+      u.dateOfBirth = body.dateOfBirth ? new Date(body.dateOfBirth) : undefined;
+    }
     const staffRoles = [ROLES.ADMIN, ROLES.AGENT_BANCAIRE, ROLES.CHEF_AGENCE, ROLES.COMITE_CREDIT];
     if (staffRoles.includes(req.userRole) && body.staffProfile?.agencyName !== undefined) {
       u.staffProfile = u.staffProfile || {};

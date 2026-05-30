@@ -35,6 +35,7 @@ const creditRequestSchema = new mongoose.Schema(
     simulationRiskLabel: { type: String, enum: ["ACCEPTABLE", "MODERE", "ELEVE"] },
     recommendations: [String],
     creditType: { type: String, enum: CREDIT_TYPES, default: "CONSO" },
+    creditPurpose: { type: String, trim: true },
     /** Contrôle pièces par l'agent */
     documentVerification: {
       cin: { type: Boolean, default: false },

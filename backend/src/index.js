@@ -14,6 +14,7 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
+import chefRoutes from "./routes/chefRoutes.js";
 import { ensureUploadDirs } from "./middleware/upload.js";
 
 const app = express();
@@ -41,6 +42,7 @@ app.use("/api/audit", auditRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/chef", chefRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

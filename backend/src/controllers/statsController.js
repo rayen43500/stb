@@ -134,3 +134,31 @@ export const statsRoles = [
   ROLES.CHEF_AGENCE,
   ROLES.COMITE_CREDIT,
 ];
+
+/** KPI tableau de bord client. */
+export async function clientDashboard(req, res, next) {
+  try {
+    const credits = await CreditRequest.find({ applicantId: req.userId }).lean();
+    let demandesActives = 0;
+    let enAttente = 0;
+    let approuvees = 0;
+    let montantTotal = 0;
+
+    for (const c of credits) {
+      if (c.status === "APPROUVÉ") {
+        approuvees += 1;
+        montantTotal += c.amount || 0;
+      }
+      if (["SOUMIS", "EN_ANALYSE", "EN_VALIDATION_CHEF", "EN_VALIDATION_COMITE", "À_MODIFIER"].includes(c.status)) {
+        demandesActives += 1;
+      }
+      if (["SOUMIS", "EN_ANALYSE", "EN_VALIDATION_CHEF", "EN_VALIDATION_COMITE"].includes(c.status)) {
+        enAttente += 1;
+      }
+    }
+
+    res.json({ demandesActives, enAttente, approuvees, montantTotal, total: credits.length });
+  } catch (e) {
+    next(e);
+  }
+}
