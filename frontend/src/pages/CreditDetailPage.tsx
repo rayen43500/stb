@@ -79,7 +79,7 @@ type DocMeta = {
   size?: number
 }
 
-const WORKFLOW_STEPS: { status: string; label: string }[] = [
+const FULL_WORKFLOW_STEPS: { status: string; label: string }[] = [
   { status: 'BROUILLON', label: 'Brouillon' },
   { status: 'SOUMIS', label: 'Soumis' },
   { status: 'EN_ANALYSE', label: 'Analyse' },
@@ -87,6 +87,52 @@ const WORKFLOW_STEPS: { status: string; label: string }[] = [
   { status: 'EN_VALIDATION_COMITE', label: 'Comité' },
   { status: 'APPROUVÉ', label: 'Approuvé' },
 ]
+
+/** Étapes visibles selon le rôle — l’agent ne voit pas la validation chef / comité / approbation. */
+function workflowStepsForRole(role: Role | undefined): { status: string; label: string }[] {
+  switch (role) {
+    case 'AGENT_BANCAIRE':
+      return [
+        { status: 'SOUMIS', label: 'Soumis' },
+        { status: 'EN_ANALYSE', label: 'Analyse' },
+      ]
+    case 'CHEF_AGENCE':
+      return [
+        { status: 'EN_VALIDATION_CHEF', label: 'Validation chef' },
+        { status: 'EN_VALIDATION_COMITE', label: 'Comité' },
+        { status: 'APPROUVÉ', label: 'Approuvé' },
+      ]
+    default:
+      return FULL_WORKFLOW_STEPS
+  }
+}
+
+function workflowSectionMeta(role: Role | undefined): { title: string; hint?: string } {
+  switch (role) {
+    case 'AGENT_BANCAIRE':
+      return {
+        title: 'Parcours — phase analyse',
+        hint: 'Réception du dossier, vérification des pièces et scoring. La validation chef et l’approbation sont gérées par le chef d’agence.',
+      }
+    case 'CHEF_AGENCE':
+      return {
+        title: 'Parcours — phase validation',
+        hint: 'Décision d’agence : validation chef, orientation comité ou approbation finale.',
+      }
+    default:
+      return { title: 'Parcours du dossier' }
+  }
+}
+
+function activeWorkflowIndex(steps: { status: string }[], status: string): number {
+  if (status === 'REFUSÉ') return steps.length - 1
+  if (status === 'À_MODIFIER') {
+    const soumisIdx = steps.findIndex((s) => s.status === 'SOUMIS')
+    return soumisIdx >= 0 ? soumisIdx : 0
+  }
+  const idx = steps.findIndex((s) => s.status === status)
+  return idx >= 0 ? idx : 0
+}
 
 const DOC_CHECKS: { key: keyof NonNullable<CreditDoc['documentVerification']>; label: string; cat: string }[] = [
   { key: 'cin', label: 'CIN.pdf', cat: 'Identité' },
@@ -250,26 +296,31 @@ export function CreditDetailPage() {
   const role = user?.role as Role | undefined
   const isClient = role === 'CLIENT'
   const isAgent = role === 'AGENT_BANCAIRE'
-  const canVerifyDocs = isAgent
-  const canEditMetaType = ['AGENT_BANCAIRE', 'CHEF_AGENCE'].includes(role || '')
+  const isChef = role === 'CHEF_AGENCE'
+  const agentAnalysisPhase = isAgent && ['SOUMIS', 'EN_ANALYSE', 'À_MODIFIER'].includes(credit?.status || '')
+  const canVerifyDocs = agentAnalysisPhase
+  const canEditMetaType =
+    isChef || (isAgent && ['SOUMIS', 'EN_ANALYSE', 'À_MODIFIER'].includes(credit?.status || ''))
+  const canViewGeneratedPdfs = !isAgent
 
+  const workflowSteps = useMemo(() => workflowStepsForRole(role), [role])
+  const workflowMeta = useMemo(() => workflowSectionMeta(role), [role])
   const activeStepIndex = useMemo(() => {
     if (!credit) return -1
-    const order = ['BROUILLON', 'SOUMIS', 'EN_ANALYSE', 'EN_VALIDATION_CHEF', 'EN_VALIDATION_COMITE', 'APPROUVÉ', 'REFUSÉ', 'À_MODIFIER']
-    const idx = order.indexOf(credit.status)
-    if (credit.status === 'REFUSÉ') return 5
-    if (credit.status === 'À_MODIFIER') return 1
-    return idx >= 0 ? Math.min(idx, WORKFLOW_STEPS.length - 1) : 0
-  }, [credit])
+    return activeWorkflowIndex(workflowSteps, credit.status)
+  }, [credit, workflowSteps])
 
   if (!credit) {
     return <div className="text-slate-600">{error || 'Chargement…'}</div>
   }
 
   const dv = credit.documentVerification || {}
+  const allDocumentsVerified = DOC_CHECKS.every(({ key }) => Boolean(dv[key]))
+  const canSubmitToChef =
+    credit.status === 'EN_ANALYSE' &&
+    allDocumentsVerified &&
+    comment.trim().length > 0
 
-  // Calcul taux endettement
-  const income = applicant?.clientProfile?.monthlyIncome
   const debtRatio = credit.debtRatioPercent
   const debtOk = debtRatio != null && debtRatio <= 33
 
@@ -289,24 +340,29 @@ export function CreditDetailPage() {
             </span>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => dlPdf()} className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
-            Amortissement PDF
-          </button>
-          {credit.status === 'APPROUVÉ' && (
-            <>
-              <button type="button" onClick={() => dlContrat()} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white hover:bg-emerald-600">Contrat PDF</button>
-              <button type="button" onClick={() => dlDecision()} className="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50">Fiche décision</button>
-            </>
-          )}
-        </div>
+        {canViewGeneratedPdfs && (
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => dlPdf()} className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+              Amortissement PDF
+            </button>
+            {credit.status === 'APPROUVÉ' && (
+              <>
+                <button type="button" onClick={() => dlContrat()} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white hover:bg-emerald-600">Contrat PDF</button>
+                <button type="button" onClick={() => dlDecision()} className="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50">Fiche décision</button>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Parcours */}
+      {/* Parcours (adapté au rôle) */}
       <section className="rounded-xl border border-blue-200/70 bg-gradient-to-br from-blue-50/95 to-white p-5">
-        <h2 className="text-sm font-semibold text-[#0F172A]">Parcours du dossier</h2>
+        <h2 className="text-sm font-semibold text-[#0F172A]">{workflowMeta.title}</h2>
+        {workflowMeta.hint && (
+          <p className="mt-1 text-xs text-slate-600">{workflowMeta.hint}</p>
+        )}
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          {WORKFLOW_STEPS.map((step, i) => {
+          {workflowSteps.map((step, i) => {
             const reached = activeStepIndex >= i
             const current = credit.status === step.status
             return (
@@ -318,10 +374,13 @@ export function CreditDetailPage() {
                 }`}>
                   {step.label}
                 </span>
-                {i < WORKFLOW_STEPS.length - 1 && <span className="text-slate-300">→</span>}
+                {i < workflowSteps.length - 1 && <span className="text-slate-300">→</span>}
               </div>
             )
           })}
+          {isAgent && credit.status === 'EN_ANALYSE' && (
+            <span className="text-xs text-slate-500">→ transmission au chef</span>
+          )}
         </div>
       </section>
 
@@ -534,7 +593,14 @@ export function CreditDetailPage() {
       {/* Pièces justificatives */}
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-xl border border-[#E2E8F0] bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-base font-semibold text-[#0F172A]">Pièces justificatives</h2>
+          <h2 className="mb-4 text-base font-semibold text-[#0F172A]">
+            {isAgent ? 'Pièces à analyser' : 'Pièces justificatives'}
+          </h2>
+          {isAgent && (
+            <p className="mb-4 text-sm text-slate-600">
+              Consultez et téléchargez uniquement les pièces nécessaires à l&apos;analyse du dossier.
+            </p>
+          )}
 
           {/* Upload client */}
           {isClient && (
@@ -666,7 +732,9 @@ export function CreditDetailPage() {
                 <span className="text-sm text-slate-700">Incidents bancaires</span>
               </label>
             </div>
-            <p className="mt-2 text-xs text-slate-500">Ces données alimentent le scoring IA et mettent à jour le niveau de risque.</p>
+            <p className="mt-2 text-xs text-slate-500">
+              Ces informations permettent de compléter l'évaluation du dossier et de mettre à jour son niveau de risque.
+            </p>
             <button
               type="button"
               disabled={loading}
@@ -685,27 +753,27 @@ export function CreditDetailPage() {
               rows={3}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Documents complets et vérifiés. Endettement maîtrisé, transmis au scoring."
+              placeholder="Documents complets et vérifiés. Dossier prêt à être soumis au chef."
             />
             <div className="mt-3 flex flex-wrap gap-3">
               {credit.status === 'SOUMIS' && (
                 <button
                   type="button"
-                  disabled={loading}
-                  className="flex items-center gap-2 rounded-lg bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1E40AF]"
-                  onClick={() => quickTransition('EN_ANALYSE', comment.trim() || 'Dossier pris en charge — analyse en cours.')}
+                  disabled={loading || comment.trim().length === 0}
+                  className="flex items-center gap-2 rounded-lg bg-slate-800 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => quickTransition('EN_ANALYSE', comment.trim() || 'Démarrage de l’analyse du dossier.')}
                 >
-                  → Lancer l'analyse
+                  ▶ Démarrer l&apos;analyse
                 </button>
               )}
               {credit.status === 'EN_ANALYSE' && (
                 <button
                   type="button"
-                  disabled={loading}
-                  className="flex items-center gap-2 rounded-lg bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1E40AF]"
-                  onClick={() => quickTransition('EN_VALIDATION_CHEF', comment.trim() || 'Dossier complet et vérifié — transmission au chef.')}
+                  disabled={loading || !canSubmitToChef}
+                  className="flex items-center gap-2 rounded-lg bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1E40AF] disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => quickTransition('EN_VALIDATION_CHEF', comment.trim())}
                 >
-                  → Transmettre au chef
+                  → Soumettre au chef
                 </button>
               )}
               {(credit.status === 'SOUMIS' || credit.status === 'EN_ANALYSE') && (
@@ -719,14 +787,62 @@ export function CreditDetailPage() {
                 </button>
               )}
             </div>
+            {credit.status === 'SOUMIS' && comment.trim().length === 0 && (
+              <p className="mt-2 text-xs text-amber-700">
+                Saisissez un commentaire avant de démarrer l&apos;analyse (scoring et vérification des pièces).
+              </p>
+            )}
+            {credit.status === 'EN_ANALYSE' && !canSubmitToChef && (
+              <p className="mt-2 text-xs text-amber-700">
+                Validez toutes les pièces et saisissez un commentaire avant de soumettre le dossier au chef.
+              </p>
+            )}
             {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
             {metaError && <p className="mt-2 text-sm text-red-600">{metaError}</p>}
           </div>
         </section>
       )}
 
-      {/* Action métier (autres rôles) */}
-      {allowed.length > 0 && !isAgent && (
+      {/* Décision chef d'agence */}
+      {allowed.length > 0 && isChef && (
+        <section className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-5 shadow-sm">
+          <h2 className="mb-1 text-base font-semibold text-[#0F172A]">Validation chef d&apos;agence</h2>
+          <p className="mb-4 text-sm text-slate-600">
+            Approuvez, orientez vers le comité, refusez ou renvoyez le dossier au client.
+          </p>
+          <form className="flex flex-col gap-4 sm:flex-row sm:items-end" onSubmit={applyTransition}>
+            <label className="text-sm text-slate-600">
+              Prochain statut
+              <select
+                className="mt-1 block rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-700"
+                value={nextStatus}
+                onChange={(e) => setNextStatus(e.target.value)}
+              >
+                {allowed.map((s) => (
+                  <option key={s} value={s}>{statusLabelFr(s)}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex-1 text-sm text-slate-600">
+              Commentaire obligatoire
+              <input
+                required
+                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-700"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Ex. Document manquant : relevé des 3 derniers mois."
+              />
+            </label>
+            <button type="submit" disabled={loading} className="rounded-lg bg-blue-700 px-4 py-2 font-medium text-white hover:bg-blue-600 disabled:opacity-60">
+              Valider
+            </button>
+          </form>
+          {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        </section>
+      )}
+
+      {/* Action métier (admin) */}
+      {allowed.length > 0 && !isAgent && !isChef && (
         <section className="rounded-xl border border-[#E2E8F0] bg-white p-5 shadow-sm">
           <h2 className="mb-1 text-base font-semibold text-[#0F172A]">Action métier</h2>
           <p className="mb-4 text-sm text-slate-600">Transitions autorisées pour votre rôle ({user?.role}).</p>
@@ -750,7 +866,7 @@ export function CreditDetailPage() {
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-700"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="Ex. Document manquant : relevé des 3 derniers mois."
+                placeholder="Ex. Dossier validé pour décision comité."
               />
             </label>
             <button type="submit" disabled={loading} className="rounded-lg bg-blue-700 px-4 py-2 font-medium text-white hover:bg-blue-600 disabled:opacity-60">

@@ -3,6 +3,7 @@ import path from "path";
 import CreditRequest from "../models/CreditRequest.js";
 import Document from "../models/Document.js";
 import { ROLES } from "../models/User.js";
+import { AGENT_DOSSIER_STATUSES } from "../config/workflow.js";
 import { creditsDir } from "../middleware/upload.js";
 import { writeAudit } from "../utils/audit.js";
 
@@ -10,13 +11,13 @@ async function canAccessCredit(req, creditId) {
   const doc = await CreditRequest.findById(creditId);
   if (!doc) return null;
   if (req.userRole === ROLES.CLIENT && doc.applicantId.toString() !== req.userId) return null;
-  if (
-    req.userRole === ROLES.CLIENT ||
-    req.userRole === ROLES.AGENT_BANCAIRE ||
-    req.userRole === ROLES.CHEF_AGENCE 
-    
- 
-  ) {
+  if (req.userRole === ROLES.CHEF_AGENCE) {
+    return doc;
+  }
+  if (req.userRole === ROLES.AGENT_BANCAIRE) {
+    return AGENT_DOSSIER_STATUSES.includes(doc.status) ? doc : null;
+  }
+  if (req.userRole === ROLES.CLIENT) {
     return doc;
   }
   return null;

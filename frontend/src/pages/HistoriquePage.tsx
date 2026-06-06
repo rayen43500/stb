@@ -50,10 +50,15 @@ function roleDisplay(role: string): string {
   const map: Record<string, string> = {
     CLIENT: 'Client',
     AGENT_BANCAIRE: 'Agent',
-    CHEF_AGENCE: 'Chef d’agence',
-    
+    CHEF_AGENCE: "Chef d'agence",
   }
   return map[role] || roleLabelFr[role as Role] || role
+}
+
+function eventLink(entry: TimelineEntry): string | null {
+  if (entry.kind === 'comment') return `/dossiers/${entry.dossierId}`
+  if (!entry.link) return null
+  return entry.link.startsWith('/') ? entry.link : `/${entry.link}`
 }
 
 export function HistoriquePage() {
@@ -63,14 +68,13 @@ export function HistoriquePage() {
   const [err, setErr] = useState<string | null>(null)
 
   useEffect(() => {
-    setLoading(true)
     Promise.all([api.get<CreditRow[]>('/credits/'), api.get<NotifRow[]>('/notifications')])
       .then(([cr, nt]) => {
         setCredits(cr.data)
         setNotifs(nt.data)
         setErr(null)
       })
-      .catch(() => setErr('Impossible de charger l’historique.'))
+      .catch(() => setErr("Impossible de charger l'historique."))
       .finally(() => setLoading(false))
   }, [])
 
@@ -107,7 +111,7 @@ export function HistoriquePage() {
   }, [credits, notifs])
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6">
+    <div className="mx-auto w-full max-w-7xl space-y-6">
       <header className="border-b border-[#E2E8F0] pb-4">
         <div className="flex items-center gap-2 text-[#64748B]">
           <History className="h-5 w-5" aria-hidden />
@@ -124,52 +128,96 @@ export function HistoriquePage() {
       {loading ? (
         <div className="flex items-center gap-2 rounded-xl border border-[#E2E8F0] bg-white px-6 py-12 text-sm text-[#64748B] shadow-sm">
           <Loader2 className="h-5 w-5 animate-spin text-[#1D4ED8]" aria-hidden />
-          Chargement de l’historique…
+          Chargement de l'historique...
         </div>
       ) : entries.length === 0 ? (
         <div className="rounded-xl border border-[#E2E8F0] bg-white px-6 py-12 text-center text-sm text-[#64748B] shadow-sm">
           Aucun événement enregistré pour le moment.
         </div>
       ) : (
-        <ol className="relative border-l border-[#E2E8F0] pl-6">
-          {entries.map((e) => (
-            <li key={e.id} className="mb-8 ml-1">
-              <span className="absolute -left-[9px] mt-1.5 h-3 w-3 rounded-full border-2 border-white bg-[#1D4ED8] shadow" />
-              <time className="text-xs font-medium text-[#94A3B8]">
-                {e.t
-                  ? new Date(e.t).toLocaleString('fr-TN', { dateStyle: 'short', timeStyle: 'short' })
-                  : '—'}
-              </time>
-              {e.kind === 'comment' ? (
-                <div className="mt-2 rounded-xl border border-[#E2E8F0] bg-white p-4 shadow-sm">
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-[#64748B]">
-                    <span className="font-semibold text-[#0F172A]">{roleDisplay(e.role)}</span>
-                    <span className="rounded-full bg-[#F1F5F9] px-2 py-0.5 font-mono text-[10px] text-[#475569]">
-                      {e.action}
-                    </span>
-                    <Link className="font-mono text-[#1D4ED8] hover:underline" to={`/dossiers/${e.dossierId}`}>
-                      Dossier …{e.dossierRef}
-                    </Link>
-                  </div>
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-[#334155]">{e.text}</p>
-                </div>
-              ) : (
-                <div className="mt-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 shadow-sm">
-                  <p className="font-semibold text-[#0F172A]">{e.title}</p>
-                  <p className="mt-1 text-sm text-[#475569]">{e.message}</p>
-                  {e.link && (
-                    <Link
-                      to={e.link.startsWith('/') ? e.link : `/${e.link}`}
-                      className="mt-2 inline-block text-xs font-semibold text-[#1D4ED8] hover:underline"
-                    >
-                      Ouvrir le dossier →
-                    </Link>
-                  )}
-                </div>
-              )}
-            </li>
-          ))}
-        </ol>
+        <div className="stb-table-shell">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] text-left text-sm">
+              <thead className="stb-table-head">
+                <tr>
+                  <th className="px-4 py-3.5">Date</th>
+                  <th className="px-4 py-3.5">Type</th>
+                  <th className="px-4 py-3.5">Auteur / événement</th>
+                  <th className="px-4 py-3.5">Dossier</th>
+                  <th className="px-4 py-3.5">Détail</th>
+                  <th className="px-4 py-3.5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {entries.map((entry) => {
+                  const link = eventLink(entry)
+                  return (
+                    <tr key={entry.id} className="align-top transition hover:bg-blue-50/40">
+                      <td className="whitespace-nowrap px-4 py-3.5 text-xs text-slate-500">
+                        {entry.t
+                          ? new Date(entry.t).toLocaleString('fr-TN', {
+                              dateStyle: 'short',
+                              timeStyle: 'short',
+                            })
+                          : '—'}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
+                            entry.kind === 'comment'
+                              ? 'bg-blue-50 text-blue-700 ring-blue-200'
+                              : 'bg-slate-100 text-slate-700 ring-slate-200'
+                          }`}
+                        >
+                          {entry.kind === 'comment' ? 'Workflow' : 'Notification'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {entry.kind === 'comment' ? (
+                          <>
+                            <span className="block font-semibold text-slate-900">{roleDisplay(entry.role)}</span>
+                            <span className="mt-1 inline-flex rounded bg-slate-100 px-2 py-0.5 font-mono text-[10px] text-slate-600">
+                              {entry.action}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="font-semibold text-slate-900">{entry.title}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {entry.kind === 'comment' ? (
+                          <Link
+                            className="font-mono text-xs font-semibold text-blue-700 hover:underline"
+                            to={`/dossiers/${entry.dossierId}`}
+                          >
+                            {entry.dossierRef}
+                          </Link>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="max-w-xl whitespace-pre-wrap px-4 py-3.5 text-slate-700">
+                        {entry.kind === 'comment' ? entry.text : entry.message}
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        {link ? (
+                          <Link
+                            to={link}
+                            className="inline-flex rounded-lg bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-600"
+                          >
+                            Ouvrir
+                          </Link>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -9,7 +9,6 @@ import {
   Home,
   MessageSquare,
   Shield,
-   ClipboardCheck, // ← ajoute cet import
 } from 'lucide-react'
 import type { Role } from '../../types'
 
@@ -47,6 +46,16 @@ export function getSidebarLinks(role: Role): SidebarLink[] {
       ...core,
       { to: '/dossiers', label: 'Dossiers', Icon: FolderKanban },
       { to: '/chef/comptes', label: 'Gestion agence', Icon: Shield },
+      { to: '/documents', label: 'Documents', Icon: FileText },
+      ...staffRest,
+    ]
+  }
+
+  if (role === 'ADMIN') {
+    return [
+      ...core,
+      { to: '/dossiers', label: 'Tous les dossiers', Icon: FolderKanban },
+      { to: '/chef/comptes', label: 'Administration', Icon: Shield },
       { to: '/documents', label: 'Documents', Icon: FileText },
       ...staffRest,
     ]

@@ -18,7 +18,6 @@ export const STATUS_LABELS_FR: Record<string, string> = {
   SOUMIS: 'Soumis',
   EN_ANALYSE: 'En analyse',
   EN_VALIDATION_CHEF: 'Validation chef',
-  EN_VALIDATION_COMITE: 'Validation comité',
   APPROUVÉ: 'Approuvé',
   REFUSÉ: 'Refusé',
   À_MODIFIER: 'À modifier',

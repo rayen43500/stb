@@ -11,7 +11,7 @@ r.get("/client", requireRoles(ROLES.CLIENT), clientDashboard);
 
 r.get(
   "/workspace",
-  requireRoles(ROLES.AGENT_BANCAIRE, ROLES.CHEF_AGENCE),
+  requireRoles(ROLES.AGENT_BANCAIRE, ROLES.CHEF_AGENCE, ROLES.ADMIN),
   workspaceStats
 );
 

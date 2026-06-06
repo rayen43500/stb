@@ -1,5 +1,8 @@
 import { ROLES } from "../models/User.js";
 
+/** Dossiers encore sous la responsabilité de l'agent (analyse des pièces). */
+export const AGENT_DOSSIER_STATUSES = ["SOUMIS", "EN_ANALYSE", "À_MODIFIER"];
+
 export const transitions = {
   [ROLES.CLIENT]: {
     BROUILLON: ["SOUMIS"],

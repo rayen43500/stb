@@ -87,7 +87,9 @@ export default function App() {
             path="documents"
             element={
               <RequireAuth>
-                <DocumentsHubPage />
+                <RequireRole roles={['CLIENT', 'CHEF_AGENCE', 'ADMIN']}>
+                  <DocumentsHubPage />
+                </RequireRole>
               </RequireAuth>
             }
           />
@@ -97,7 +99,7 @@ export default function App() {
             path="chef/comptes"
             element={
               <RequireAuth>
-                <RequireRole roles={['CHEF_AGENCE']}>
+                <RequireRole roles={['CHEF_AGENCE', 'ADMIN']}>
                   <ChefComptesPage />
                 </RequireRole>
               </RequireAuth>

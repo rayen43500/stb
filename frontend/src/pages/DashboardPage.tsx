@@ -49,7 +49,7 @@ type NotifRow = {
   createdAt?: string
 }
 
-const staffRoles: Role[] = [ 'AGENT_BANCAIRE', 'CHEF_AGENCE']
+const staffRoles: Role[] = ['AGENT_BANCAIRE', 'CHEF_AGENCE', 'ADMIN']
 
 function workflowHints(role: Role): string[] {
   const hints: Partial<Record<Role, string[]>> = {
@@ -65,6 +65,10 @@ function workflowHints(role: Role): string[] {
     CHEF_AGENCE: [
       'Validez les dossiers en « validation chef » avant envoi pour décision.',
       'Supervisez l\'activité de l\'agence via la liste centralisée des dossiers.',
+    ],
+    ADMIN: [
+      "Supervisez l'activité globale et la répartition des dossiers.",
+      'Consultez les indicateurs de gestion et les comptes internes.',
     ],
   }
   return hints[role] ?? []

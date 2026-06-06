@@ -3,7 +3,7 @@ import CreditRequest, { CREDIT_STATUSES, CREDIT_TYPES } from "../models/CreditRe
 import User, { ROLES } from "../models/User.js";
 import { runSimulation } from "../utils/simulation.js";
 import { callScoringService } from "../utils/scoringClient.js";
-import { canTransition, getAllowedNextStatuses } from "../config/workflow.js";
+import { AGENT_DOSSIER_STATUSES, canTransition, getAllowedNextStatuses } from "../config/workflow.js";
 import { writeAudit } from "../utils/audit.js";
 import { notifyCreditEvent, notifyStaffByRole } from "../utils/notify.js";
 import { buildAmortizationSchedule } from "../utils/amortization.js";
@@ -43,6 +43,9 @@ export async function allowedNext(req, res, next) {
     if (!doc) return res.status(404).json({ message: "Dossier introuvable" });
     if (req.userRole === ROLES.CLIENT && doc.applicantId.toString() !== req.userId) {
       return res.status(403).json({ message: "Accès refusé" });
+    }
+    if (!agentCanAccessDossier(req.userRole, doc.status)) {
+      return res.status(403).json({ message: "Ce dossier n'est plus sous votre responsabilité d'analyse." });
     }
     const nextStatuses = getAllowedNextStatuses(req.userRole, doc.status);
     res.json({ current: doc.status, allowedNext: nextStatuses });
@@ -281,13 +284,20 @@ export async function updateCreditMeta(req, res, next) {
     if (!staffRoles.includes(req.userRole)) {
       return res.status(403).json({ message: "Réservé au personnel banque" });
     }
+    if (!agentCanAccessDossier(req.userRole, doc.status)) {
+      return res.status(403).json({ message: "Ce dossier n'est plus sous votre responsabilité d'analyse." });
+    }
 
     const { creditType, documentVerification, bankingIncidents, priorDefaults } = req.body || {};
-    if (creditType != null && CREDIT_TYPES.includes(creditType)) {
+    const canEditType =
+      req.userRole === ROLES.CHEF_AGENCE ||
+      (req.userRole === ROLES.AGENT_BANCAIRE && AGENT_DOSSIER_STATUSES.includes(doc.status));
+    if (creditType != null && CREDIT_TYPES.includes(creditType) && canEditType) {
       doc.creditType = creditType;
     }
 
-    const canEditDocs = req.userRole === ROLES.AGENT_BANCAIRE;
+    const canEditDocs =
+      req.userRole === ROLES.AGENT_BANCAIRE && AGENT_DOSSIER_STATUSES.includes(doc.status);
     if (documentVerification && typeof documentVerification === "object" && canEditDocs) {
       doc.documentVerification = doc.documentVerification || {};
       for (const key of ["cin", "payslip", "contract", "bankStatement"]) {
@@ -298,7 +308,8 @@ export async function updateCreditMeta(req, res, next) {
       doc.markModified("documentVerification");
     }
 
-    const canEditIncidents =  req.userRole === ROLES.AGENT_BANCAIRE;
+    const canEditIncidents =
+      req.userRole === ROLES.AGENT_BANCAIRE && AGENT_DOSSIER_STATUSES.includes(doc.status);
     if (canEditIncidents && (bankingIncidents != null || priorDefaults != null)) {
       const applicant = await User.findById(doc.applicantId);
       if (applicant) {
@@ -332,9 +343,18 @@ export async function updateCreditMeta(req, res, next) {
   }
 }
 
+function agentCanAccessDossier(role, status) {
+  return role !== ROLES.AGENT_BANCAIRE || AGENT_DOSSIER_STATUSES.includes(status);
+}
+
 export async function listMine(req, res, next) {
   try {
-    const q = req.userRole === ROLES.CLIENT ? { applicantId: req.userId } : {};
+    let q = {};
+    if (req.userRole === ROLES.CLIENT) {
+      q = { applicantId: req.userId };
+    } else if (req.userRole === ROLES.AGENT_BANCAIRE) {
+      q = { status: { $in: AGENT_DOSSIER_STATUSES } };
+    }
     const items = await CreditRequest.find(q).sort({ updatedAt: -1 }).populate("applicantId", "email firstName lastName role");
     res.json(items);
   } catch (e) {
@@ -352,6 +372,9 @@ export async function getOne(req, res, next) {
     if (req.userRole === ROLES.CLIENT && doc.applicantId._id.toString() !== req.userId) {
       return res.status(403).json({ message: "Accès refusé" });
     }
+    if (!agentCanAccessDossier(req.userRole, doc.status)) {
+      return res.status(403).json({ message: "Ce dossier n'est plus sous votre responsabilité d'analyse." });
+    }
     res.json(doc);
   } catch (e) {
     next(e);
@@ -366,6 +389,9 @@ export async function transition(req, res, next) {
     if (!doc) return res.status(404).json({ message: "Dossier introuvable" });
     if (req.userRole === ROLES.CLIENT && doc.applicantId.toString() !== req.userId) {
       return res.status(403).json({ message: "Accès refusé" });
+    }
+    if (!agentCanAccessDossier(req.userRole, doc.status)) {
+      return res.status(403).json({ message: "Ce dossier n'est plus sous votre responsabilité d'analyse." });
     }
     if (!CREDIT_STATUSES.includes(nextStatus)) {
       return res.status(400).json({ message: "Statut cible invalide" });

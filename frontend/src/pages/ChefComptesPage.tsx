@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api, downloadBlob } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import type { Role } from '../types'
+import { ManagementCharts } from '../components/dashboard/WorkspaceCharts'
 
 type PendingClient = {
   _id: string
@@ -69,7 +70,7 @@ export function ChefComptesPage() {
   }
 
   useEffect(() => {
-    if (user?.role !== 'CHEF_AGENCE' ) return
+    if (!user || !['CHEF_AGENCE', 'ADMIN'].includes(user.role)) return
     loadPending().catch(() => setErr('Chargement impossible'))
     loadAgents().catch(() => {})
     loadReport().catch(() => {})
@@ -123,8 +124,8 @@ export function ChefComptesPage() {
     }
   }
 
-  if (user?.role !== 'CHEF_AGENCE' ) {
-    return <p className="text-red-600">Accès réservé au chef agence.</p>
+  if (!user || !['CHEF_AGENCE', 'ADMIN'].includes(user.role)) {
+    return <p className="text-red-600">Accès réservé au chef agence et à l'administrateur.</p>
   }
 
   const tabs = [
@@ -158,6 +159,8 @@ export function ChefComptesPage() {
           </button>
         ))}
       </div>
+
+      {report && <ManagementCharts agents={agents} report={report} />}
 
       {tab === 'clients' && (
         <section className="stb-card">

@@ -10,6 +10,8 @@ import { statusBadgeClass, statusLabelFr } from '../lib/creditStatusStyle'
 import { creditTypeLabel } from '../lib/creditTypeLabels'
 import type { Role } from '../types'
 import type { SafeUser } from '../types'
+import { PublicLandingPage } from './PublicLandingPage'
+import { PortfolioCharts } from '../components/dashboard/WorkspaceCharts'
 //const PAGE_SIZE = 6
 
 //type NotifRow = {
@@ -22,6 +24,8 @@ import type { SafeUser } from '../types'
 type WorkspacePayload = {
   role: Role
   kpis: Record<string, number>
+  statusMap: Record<string, number>
+  byCreditType: Record<string, number>
   recent: Array<{
     _id: string
     status: string
@@ -47,7 +51,7 @@ type ClientStats = {
   //'inline-flex h-10 items-center justify-center gap-2 rounded-[10px] border border-[#E2E8F0] bg-white px-4 text-sm font-medium text-[#0F172A] transition duration-150 hover:bg-[#F8FAFC]'
 
 
-function PublicHome() {
+export function LegacyPublicHome() {
   return (
     <div style={{ fontFamily: "'Segoe UI', sans-serif", background: '#F0F4F8' }}>
 
@@ -106,7 +110,7 @@ function PublicHome() {
           { n: '1', label: 'Inscription' },
           { n: '2', label: 'Simulation' },
           { n: '3', label: 'Soumission' },
-          { n: '4', label: 'Analyse IA' },
+          { n: '4', label: 'Étude du dossier' },
           { n: '5', label: 'Décision' },
         ].map((s, i, arr) => (
           <div key={s.n} style={{ display: 'flex', alignItems: 'center' }}>
@@ -465,34 +469,49 @@ function ClientHome({ user }: { user: SafeUser }) {
     </div>
   )
 }
-function StaffHome(_props: { user: SafeUser }) {
+const AGENT_RECENT_STATUSES = new Set(['SOUMIS', 'EN_ANALYSE', 'À_MODIFIER'])
+const CHEF_RECENT_STATUSES = new Set(['EN_VALIDATION_CHEF', 'EN_VALIDATION_COMITE', 'APPROUVÉ', 'REFUSÉ'])
+
+function StaffHome({ user }: { user: SafeUser }) {
   const [ws, setWs] = useState<WorkspacePayload | null>(null)
   const [notifs, setNotifs] = useState<{ _id: string; title: string; message: string; createdAt?: string }[]>([])
   const [loading, setLoading] = useState(true)
-  
+  const isAgent = user.role === 'AGENT_BANCAIRE'
+  const isChef = user.role === 'CHEF_AGENCE'
 
   useEffect(() => {
   Promise.all([
-    api.get<{ _id: string; status: string; amount: number; creditType?: string; updatedAt: string; applicantId?: { firstName?: string; lastName?: string } }[]>('/credits/'),
+    api.get<WorkspacePayload>('/stats/workspace'),
     api.get<{ _id: string; title: string; message: string; createdAt?: string }[]>('/notifications'),
   ])
-    .then(([cr, n]) => {
-      const credits = cr.data
-      const kpis: Record<string, number> = {
-        dossiersRecus: credits.length,
-        enAttente: credits.filter(c => c.status === 'SOUMIS' || c.status === 'EN_ANALYSE').length,
-        dossiersEnvoyesScoring: credits.filter(c => c.status === 'EN_ANALYSE').length,
-        retournesClient: credits.filter(c => c.status === 'À_MODIFIER').length,
-      }
-      setWs({ role: 'AGENT_BANCAIRE', kpis, recent: credits.slice(0, 8) })
+    .then(([workspace, n]) => {
+      setWs(workspace.data)
       setNotifs(n.data.slice(0, 5))
     })
     .catch((err) => console.log('erreur:', err))
     .finally(() => setLoading(false))
 }, [])
-  
 
-  //const kpiKeys = ['dossiersRecus', 'enAttenteTraitement', 'dossiersEnvoyesScoring', 'retournesClient']
+  const dashboardTitle = isAgent
+    ? 'Tableau de bord — Analyse'
+    : isChef
+      ? 'Tableau de bord — Validation chef'
+      : 'Tableau de bord STB'
+
+  const dashboardLead = isAgent
+    ? 'Dossiers soumis et en cours d’analyse : vérifiez les pièces puis transmettez au chef.'
+    : isChef
+      ? 'Dossiers en validation chef : approuvez, orientez vers le comité ou renvoyez au client.'
+      : 'Vue d’ensemble de l’activité crédit.'
+
+  const recentRows = useMemo(() => {
+    if (!ws) return []
+    const pool = ws.recent
+    if (isAgent) return pool.filter((r) => AGENT_RECENT_STATUSES.has(r.status))
+    if (isChef) return pool.filter((r) => CHEF_RECENT_STATUSES.has(r.status))
+    return pool
+  }, [ws, isAgent, isChef])
+
   const kpiLabels: Record<string, string> = {
     dossiersRecus: 'Dossiers reçus',
     enAttenteTraitement: 'En attente',
@@ -501,6 +520,8 @@ function StaffHome(_props: { user: SafeUser }) {
     enAttente: 'En attente',
     envoyesScoring: 'Envoyés au scoring',
     dossiersEnAttente: 'En attente',
+    totalDossiers: 'Total dossiers',
+    totalUtilisateurs: 'Utilisateurs',
   }
   const kpiColors: Record<string, string> = {
     dossiersRecus: 'text-[#0F172A]',
@@ -510,6 +531,8 @@ function StaffHome(_props: { user: SafeUser }) {
     enAttente: 'text-orange-500',
     envoyesScoring: 'text-blue-600',
     dossiersEnAttente: 'text-orange-500',
+    totalDossiers: 'text-blue-700',
+    totalUtilisateurs: 'text-violet-700',
   }
 
   const kpisToShow = ws
@@ -531,7 +554,13 @@ function StaffHome(_props: { user: SafeUser }) {
 
       {/* Titre */}
       <div>
-        <h1 className="text-xl font-bold text-[#0F172A]">Tableau de bord Agent</h1>
+        <h1 className="text-xl font-bold text-[#0F172A]">{dashboardTitle}</h1>
+        <p className="mt-1 text-sm text-[#64748B]">{dashboardLead}</p>
+        {isChef && (
+          <Link to="/documents" className="mt-2 inline-block text-xs font-semibold text-[#1D4ED8] hover:underline">
+            Espace documents STB →
+          </Link>
+        )}
       </div>
 
       {/* KPIs */}
@@ -551,6 +580,8 @@ function StaffHome(_props: { user: SafeUser }) {
           ))}
         </div>
       )}
+
+      {ws && !isAgent && <PortfolioCharts statusMap={ws.statusMap} byCreditType={ws.byCreditType} />}
 
       {/* Contenu principal */}
       {ws && (
@@ -577,7 +608,7 @@ function StaffHome(_props: { user: SafeUser }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F1F5F9]">
-                  {ws.recent.slice(0, 8).map((r) => (
+                  {recentRows.slice(0, 8).map((r) => (
                     <tr key={r._id} className="hover:bg-[#F8FAFC] transition">
                       <td className="px-4 py-3 font-medium text-[#0F172A]">
                         {typeof r.applicantId === 'object' && r.applicantId
@@ -649,6 +680,8 @@ function formatKpiLabel(key: string): string {
     enAttente: 'En attente',
     envoyesScoring: 'En analyse risque',
     attenteComite: 'Attente comité',
+    totalDossiers: 'Total dossiers',
+    totalUtilisateurs: 'Utilisateurs',
   }
   return map[key] || key
 }
@@ -674,7 +707,7 @@ export function HomePage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl">
-      <PublicHome />
+      <PublicLandingPage />
     </div>
   )
 }

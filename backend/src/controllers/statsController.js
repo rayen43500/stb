@@ -93,7 +93,14 @@ export async function workspaceStats(req, res, next) {
         dossiersRefuses: refused,
         montantTotalAccorde,
       };
-    } 
+    } else if (role === ROLES.ADMIN) {
+      kpis = {
+        totalDossiers: recentDocs.length ? await CreditRequest.countDocuments() : 0,
+        totalUtilisateurs: await User.countDocuments(),
+        dossiersApprouves: approved,
+        montantTotalAccorde,
+      };
+    }
   
 
     res.json({
@@ -114,7 +121,7 @@ export const statsRoles = [
   
   ROLES.AGENT_BANCAIRE,
   ROLES.CHEF_AGENCE,
-  
+  ROLES.ADMIN,
 ];
 
 /** KPI tableau de bord client. */

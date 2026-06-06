@@ -70,16 +70,19 @@ function roleDossiersIntro(role: Role): { title: string; lead: string } {
       }
     case 'AGENT_BANCAIRE':
       return {
-        title: 'File des dossiers — agent',
-        lead: 'Passez les dossiers soumis en analyse, puis en validation chef ou retour client. Chaque action est tracée avec commentaire.',
+        title: 'File des dossiers — analyse',
+        lead: 'Consultez les pièces, démarrez l’analyse (scoring), puis transmettez au chef ou renvoyez au client. L’approbation finale relève du chef d’agence.',
       }
     case 'CHEF_AGENCE':
       return {
         title: 'Dossiers — validation agence',
         lead: 'Dossiers en attente de validation chef : orientez vers le comité, une décision ou une demande de modification.',
       }
-    
-    
+    case 'ADMIN':
+      return {
+        title: 'Tous les dossiers',
+        lead: "Supervisez l'ensemble des demandes de crédit, leurs statuts et leur avancement.",
+      }
   }
 }
 

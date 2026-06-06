@@ -2,7 +2,7 @@ export type Role =
   | 'CLIENT'
   | 'AGENT_BANCAIRE'
   | 'CHEF_AGENCE'
-  
+  | 'ADMIN'
 
 export type SafeUser = {
   id: string

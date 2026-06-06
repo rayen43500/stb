@@ -10,18 +10,14 @@ export function roleTransitionHints(role: Role): string[] {
       ]
     case 'AGENT_BANCAIRE':
       return [
-        'SOUMIS → EN_ANALYSE',
-        'EN_ANALYSE → EN_VALIDATION_CHEF, À_MODIFIER ou REFUSÉ',
+        'SOUMIS → EN_ANALYSE (démarrer l’analyse et le scoring)',
+        'EN_ANALYSE → EN_VALIDATION_CHEF ou À_MODIFIER (transmission au chef uniquement après analyse)',
       ]
     case 'CHEF_AGENCE':
       return [
         'EN_VALIDATION_CHEF → EN_VALIDATION_COMITE, APPROUVÉ, REFUSÉ ou À_MODIFIER',
       ]
-    //case 'COMITE_CREDIT':
-      return [
-        'EN_VALIDATION_COMITE → APPROUVÉ, REFUSÉ ou À_MODIFIER',
-      ]
-    //case 'ADMIN':
+    case 'ADMIN':
       return ['Tous les changements de statut sont autorisés (supervision et démo).']
     default:
       return []
