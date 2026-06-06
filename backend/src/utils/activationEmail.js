@@ -1,4 +1,5 @@
 import { frontendBaseUrl, sendOptionalEmail } from "./mail.js";
+import { renderStbEmail } from "./emailTemplate.js";
 
 export function buildActivationLink(email, code) {
   const base = frontendBaseUrl();
@@ -15,7 +16,7 @@ export async function sendClientActivationEmail(user, code, { reason = "registra
   const intro =
     reason === "resend"
       ? "Vous avez demandé un nouvel email de vérification."
-      : "Merci pour votre inscription sur STB Crédits.";
+      : "Merci pour votre inscription sur le portail STB Crédits.";
 
   const text = `${intro}
 
@@ -30,23 +31,24 @@ Ce lien expire dans 48 heures.
 Cordialement,
 STB Bank — Portail Crédits`;
 
-  const html = `
-<p>${intro}</p>
-<p>Bonjour <strong>${name}</strong>,</p>
-<p>Cliquez sur le bouton ci-dessous pour vérifier votre compte et choisir votre mot de passe :</p>
-<p style="margin:24px 0">
-  <a href="${link}" style="background:#1D4ED8;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">
-    Activer mon compte STB
-  </a>
-</p>
-<p style="font-size:13px;color:#64748B">Ou copiez ce lien :<br><a href="${link}">${link}</a></p>
-<p style="font-size:13px;color:#64748B">Code de secours : <strong>${code}</strong> (valable 48 h)</p>
-<p>Cordialement,<br>STB Bank — Portail Crédits</p>`;
+  const { html, attachments } = renderStbEmail({
+    title: "Vérifiez votre compte",
+    greeting: `Bonjour ${name}`,
+    paragraphs: [
+      intro,
+      "Cliquez sur le bouton ci-dessous pour activer votre compte et choisir votre mot de passe.",
+      "Si le bouton ne fonctionne pas, utilisez le code de secours sur la page d'activation.",
+    ],
+    ctaHref: link,
+    ctaLabel: "Activer mon compte STB",
+    code,
+  });
 
   return sendOptionalEmail({
     to: user.email,
     subject: "STB Crédits — Vérifiez votre compte",
     text,
     html,
+    attachments,
   });
 }

@@ -30,7 +30,7 @@ function getTransport() {
   return transporter;
 }
 
-export async function sendOptionalEmail({ to, subject, text, html }) {
+export async function sendOptionalEmail({ to, subject, text, html, attachments }) {
   const t = getTransport();
   if (!t || !to) {
     if (subject) {
@@ -46,6 +46,7 @@ export async function sendOptionalEmail({ to, subject, text, html }) {
       subject,
       text,
       html: html || undefined,
+      attachments: attachments?.length ? attachments : undefined,
     });
     return true;
   } catch (err) {

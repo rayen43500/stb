@@ -5,6 +5,8 @@ import User, { ROLES } from "../models/User.js";
 import CreditRequest from "../models/CreditRequest.js";
 import { sendOptionalEmail } from "../utils/mail.js";
 import { sendClientActivationEmail } from "../utils/activationEmail.js";
+import { renderStbEmail } from "../utils/emailTemplate.js";
+import { frontendBaseUrl } from "../utils/mail.js";
 import { notifyUser } from "../utils/notify.js";
 import { writeAudit } from "../utils/audit.js";
 
@@ -87,10 +89,22 @@ export async function rejectClient(req, res, next) {
     user.activationCodeExpires = undefined;
     await user.save();
 
+    const motif = reason.trim();
+    const { html, attachments } = renderStbEmail({
+      title: "Inscription refusée",
+      greeting: `Bonjour ${user.firstName || ""}`.trim(),
+      paragraphs: [
+        "Votre demande d'inscription sur le portail STB Crédits n'a pas été retenue.",
+        `Motif : ${motif}`,
+        "Pour toute question, contactez votre agence STB.",
+      ],
+    });
     await sendOptionalEmail({
       to: user.email,
       subject: "STB Crédits — Inscription refusée",
-      text: `Bonjour,\n\nVotre demande d'inscription a été refusée.\nMotif : ${reason.trim()}\n\nCordialement,\nVotre agence STB`,
+      text: `Bonjour,\n\nVotre demande d'inscription a été refusée.\nMotif : ${motif}\n\nCordialement,\nVotre agence STB`,
+      html,
+      attachments,
     });
 
     await writeAudit({
@@ -134,10 +148,25 @@ export async function createStaffAccount(req, res, next) {
       staffProfile: agencyName ? { agencyName } : undefined,
     });
 
+    const loginUrl = `${frontendBaseUrl()}/login`;
+    const { html, attachments } = renderStbEmail({
+      title: "Vos identifiants de connexion",
+      greeting: `Bonjour ${firstName}`,
+      paragraphs: [
+        "Votre compte personnel STB Crédits a été créé par le chef d'agence.",
+        `Email : ${email}`,
+        `Mot de passe temporaire : ${tempPassword}`,
+        "Connectez-vous puis changez votre mot de passe dans Paramètres.",
+      ],
+      ctaHref: loginUrl,
+      ctaLabel: "Se connecter au portail",
+    });
     await sendOptionalEmail({
       to: user.email,
       subject: "STB Crédits — Vos identifiants de connexion",
-      text: `Bonjour ${firstName},\n\nVotre compte STB Crédits a été créé.\nEmail : ${email}\nMot de passe temporaire : ${tempPassword}\n\nConnectez-vous et changez votre mot de passe dans Paramètres.\n\nCordialement,\nVotre agence STB`,
+      text: `Bonjour ${firstName},\n\nVotre compte STB Crédits a été créé.\nEmail : ${email}\nMot de passe temporaire : ${tempPassword}\n\nConnectez-vous : ${loginUrl}\n\nCordialement,\nVotre agence STB`,
+      html,
+      attachments,
     });
 
     await writeAudit({

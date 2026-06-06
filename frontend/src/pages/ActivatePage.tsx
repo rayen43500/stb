@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { AuthBrandHeader } from '../components/auth/AuthBrandHeader'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../lib/api'
 
@@ -79,10 +80,10 @@ export function ActivatePage() {
   const fromLink = Boolean(searchParams.get('code'))
 
   return (
-    <div className="mx-auto max-w-md">
-      <div className="stb-card">
-        <h1 className="stb-h1">Activer mon compte</h1>
-        <p className="stb-lead">
+    <div style={{ minHeight: '100vh', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
+      <div style={{ background: 'white', borderRadius: '16px', border: '0.5px solid #DBEAFE', padding: '36px 32px', width: '100%', maxWidth: '420px', boxShadow: '0 4px 24px rgba(30, 58, 138, 0.08)' }}>
+        <AuthBrandHeader title="Activer mon compte" />
+        <p className="stb-lead" style={{ marginTop: 0 }}>
           {fromLink
             ? 'Lien de vérification détecté. Définissez votre mot de passe pour finaliser l\'activation.'
             : 'Saisissez le code reçu par email ou ouvrez directement le lien de vérification.'}
@@ -158,3 +159,4 @@ export function ActivatePage() {
     </div>
   )
 }
+

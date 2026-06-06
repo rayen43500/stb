@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
+import { AuthBrandHeader } from '../components/auth/AuthBrandHeader'
 import { useAuth } from '../context/AuthContext'
+
+const authShell = {
+  page: { minHeight: '100vh', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' } as const,
+  card: { background: 'white', borderRadius: '16px', border: '0.5px solid #DBEAFE', padding: '36px 32px', width: '100%', maxWidth: '480px', boxShadow: '0 4px 24px rgba(30, 58, 138, 0.08)' } as const,
+}
 
 export function RegisterPage() {
   const { register, token } = useAuth()
@@ -39,9 +45,9 @@ export function RegisterPage() {
 
   if (submitted) {
     return (
-      <div className="mx-auto max-w-md">
-        <div className="stb-card text-center">
-          <h1 className="stb-h1">Vérifiez votre email</h1>
+      <div style={authShell.page}>
+        <div style={{ ...authShell.card, maxWidth: '420px', textAlign: 'center' }}>
+          <AuthBrandHeader title="Vérifiez votre email" />
           <p className="stb-lead mt-4">
             Un lien d&apos;activation a été envoyé à <strong>{submittedEmail}</strong>. Cliquez sur le lien pour
             vérifier votre compte et définir votre mot de passe.
@@ -63,10 +69,10 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg">
-      <div className="stb-card">
-        <h1 className="stb-h1">Inscription client</h1>
-        <p className="stb-lead">
+    <div style={authShell.page}>
+      <div style={authShell.card}>
+        <AuthBrandHeader title="Inscription client" />
+        <p className="stb-lead" style={{ marginTop: 0 }}>
           Renseignez vos informations. Vous recevrez un email avec un lien de vérification pour activer votre compte.
         </p>
         <form className="mt-8 space-y-5" onSubmit={submit}>

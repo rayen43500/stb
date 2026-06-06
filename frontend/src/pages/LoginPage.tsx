@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
+import { AuthBrandHeader } from '../components/auth/AuthBrandHeader'
 import { useAuth } from '../context/AuthContext'
 
 
@@ -55,25 +56,7 @@ export function LoginPage() {
         boxShadow: '0 4px 24px rgba(30, 58, 138, 0.08)',
       }}>
 
-        {/* Logo STB */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '28px' }}>
-          <img
-            src="/stb-logo.png"
-            alt="STB Bank"
-            style={{ height: '52px', objectFit: 'contain' }}
-          />
-        </div>
-
-        {/* Titre */}
-        <h1 style={{
-          fontSize: '20px',
-          fontWeight: '600',
-          color: '#0F172A',
-          textAlign: 'center',
-          marginBottom: '24px',
-        }}>
-          Connexion
-        </h1>
+        <AuthBrandHeader title="Connexion" />
 
         {/* Formulaire */}
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
