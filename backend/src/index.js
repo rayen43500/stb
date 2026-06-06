@@ -52,7 +52,11 @@ app.use((err, _req, res, _next) => {
 
 async function main() {
   const uri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/stb_credit";
-  await mongoose.connect(uri);
+  const mongoOpts = {};
+  if (process.env.MONGODB_TLS_INSECURE === "true") {
+    mongoOpts.tlsAllowInvalidCertificates = true;
+  }
+  await mongoose.connect(uri, mongoOpts);
   app.listen(PORT, () => {
     console.log(`STB API écoute sur le port ${PORT}`);
   });

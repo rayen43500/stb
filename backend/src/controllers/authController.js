@@ -66,7 +66,7 @@ export async function register(req, res, next) {
     res.status(201).json({
       message: emailSent
         ? "Inscription enregistrée. Consultez votre email et cliquez sur le lien pour activer votre compte."
-        : "Inscription enregistrée. Email non configuré (SMTP) : utilisez la page d'activation avec le code affiché en console serveur.",
+        : "Inscription enregistrée. Email non envoyé — ouvrez /activate avec le code ci-dessous (voir console serveur en dev).",
       pending: true,
       userId: user._id.toString(),
       emailSent,
@@ -100,7 +100,7 @@ export async function resendActivation(req, res, next) {
     res.json({
       message: emailSent
         ? "Email de vérification renvoyé. Consultez votre boîte de réception."
-        : "SMTP non configuré — contactez l'administrateur.",
+        : "Email non envoyé — vérifiez SMTP dans backend/.env ou utilisez le code en développement.",
       emailSent,
       ...(process.env.NODE_ENV !== "production" && !emailSent ? { devCode: code } : {}),
     });
