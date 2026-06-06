@@ -1,4 +1,16 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import {
+  ArrowRight,
+  Banknote,
+  Calculator,
+  Car,
+  Home,
+  Info,
+  RefreshCw,
+  TrendingUp,
+  Wallet,
+} from 'lucide-react'
 import { api } from '../lib/api'
 import { formatTnd } from '../lib/money'
 
@@ -8,25 +20,57 @@ type SimResult = {
   monthlyPayment: number
   totalCostInterest: number
   totalRepaid: number
+  debtRatioPercent?: number | null
+  simulationRiskLabel?: string
+  recommendations?: string[]
 }
 
-const TABS: { id: CreditType; label: string; icon: string; defaultRate: number }[] = [
-  { id: 'IMMOBILIER', label: 'Crédit Immobilier', icon: '🏠', defaultRate: 6.5 },
-  { id: 'VEHICULE',   label: 'Crédit Auto',       icon: '🚗', defaultRate: 8.0 },
-  { id: 'CONSO',      label: 'Crédit Consommation', icon: '💳', defaultRate: 9.5 },
+const TABS: {
+  id: CreditType
+  label: string
+  shortLabel: string
+  Icon: typeof Home
+  defaultRate: number
+  hint: string
+}[] = [
+  {
+    id: 'IMMOBILIER',
+    label: 'Crédit immobilier',
+    shortLabel: 'Immobilier',
+    Icon: Home,
+    defaultRate: 6.5,
+    hint: 'Achat, construction ou aménagement',
+  },
+  {
+    id: 'VEHICULE',
+    label: 'Crédit automobile',
+    shortLabel: 'Auto',
+    Icon: Car,
+    defaultRate: 8.0,
+    hint: 'Véhicule neuf ou d\'occasion',
+  },
+  {
+    id: 'CONSO',
+    label: 'Crédit consommation',
+    shortLabel: 'Consommation',
+    Icon: Banknote,
+    defaultRate: 9.5,
+    hint: 'Projets personnels et équipements',
+  },
 ]
 
-const inputStyle = {
-  width: '100%', padding: '10px 14px',
-  border: '1px solid #CBD5E1', borderRadius: '8px',
-  fontSize: '14px', color: '#0F172A',
-  background: '#F8FAFC', outline: 'none',
+function riskStyle(label?: string) {
+  switch (label) {
+    case 'ACCEPTABLE':
+      return { badge: 'bg-emerald-50 text-emerald-800 ring-emerald-200', text: 'Acceptable' }
+    case 'MODERE':
+      return { badge: 'bg-amber-50 text-amber-800 ring-amber-200', text: 'Modéré' }
+    case 'ELEVE':
+      return { badge: 'bg-red-50 text-red-800 ring-red-200', text: 'Élevé' }
+    default:
+      return { badge: 'bg-slate-100 text-slate-600 ring-slate-200', text: 'À compléter' }
+  }
 }
-
-const labelStyle = {
-  display: 'block', fontSize: '13px',
-  fontWeight: 500, color: '#374151', marginBottom: '6px',
-} as const
 
 export function SimulationPage() {
   const [activeTab, setActiveTab] = useState<CreditType>('IMMOBILIER')
@@ -39,33 +83,55 @@ export function SimulationPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const annualRatePercent =
-    activeTab === 'IMMOBILIER' ? 6.5 :
-    activeTab === 'VEHICULE'   ? 8.0 : 9.5
+  const tabMeta = TABS.find((t) => t.id === activeTab)!
+  const annualRatePercent = tabMeta.defaultRate
+  const needsApport = activeTab !== 'CONSO'
+  const durationYears = Math.round(durationMonths / 12)
+  const montantFinance = needsApport ? Math.max(0, amount - apportPropre) : amount
+  const minApport = amount * 0.2
+  const apportInvalid = needsApport && apportPropre > 0 && apportPropre < minApport
 
-  function handleTabChange(tab: typeof TABS[0]) {
+  const durationBounds = useMemo(() => {
+    if (activeTab === 'IMMOBILIER') return { min: 60, max: 300, minLabel: '5 ans', maxLabel: '25 ans' }
+    if (activeTab === 'VEHICULE') return { min: 12, max: 84, minLabel: '1 an', maxLabel: '7 ans' }
+    return { min: 6, max: 60, minLabel: '6 mois', maxLabel: '5 ans' }
+  }, [activeTab])
+
+  function handleTabChange(tab: (typeof TABS)[0]) {
     setActiveTab(tab.id)
     setSim(null)
     setError(null)
     setRevenuBrut(0)
     setAutresFinancements(0)
-    if (tab.id === 'IMMOBILIER') { setAmount(100000); setDurationMonths(180); setApportPropre(20000) }
-    if (tab.id === 'VEHICULE')   { setAmount(30000);  setDurationMonths(60);  setApportPropre(6000)  }
-    if (tab.id === 'CONSO')      { setAmount(10000);  setDurationMonths(36) }
+    if (tab.id === 'IMMOBILIER') {
+      setAmount(100000)
+      setDurationMonths(180)
+      setApportPropre(20000)
+    }
+    if (tab.id === 'VEHICULE') {
+      setAmount(30000)
+      setDurationMonths(60)
+      setApportPropre(6000)
+    }
+    if (tab.id === 'CONSO') {
+      setAmount(10000)
+      setDurationMonths(36)
+      setApportPropre(0)
+    }
   }
 
   async function run() {
     setError(null)
-    if (activeTab !== 'CONSO') {
-      const minApport = amount * 0.2
-      if (apportPropre < minApport) {
-        setError(`L'apport propre minimum est de 20% du montant soit ${formatTnd(minApport)}`)
-        return
-      }
+    if (needsApport && apportPropre < minApport) {
+      setError(`L'apport propre minimum est de 20 % du montant, soit ${formatTnd(minApport)}.`)
+      return
+    }
+    if (!revenuBrut || revenuBrut <= 0) {
+      setError('Veuillez renseigner votre revenu brut mensuel.')
+      return
     }
     setLoading(true)
     try {
-      const montantFinance = activeTab !== 'CONSO' ? amount - apportPropre : amount
       const { data } = await api.post<SimResult>('/credits/simulate', {
         amount: montantFinance,
         durationMonths,
@@ -82,180 +148,283 @@ export function SimulationPage() {
   }
 
   function reset() {
-    setSim(null)
-    setError(null)
-    setRevenuBrut(0)
-    setAutresFinancements(0)
-    if (activeTab === 'IMMOBILIER') { setAmount(100000); setDurationMonths(180); setApportPropre(20000) }
-    if (activeTab === 'VEHICULE')   { setAmount(30000);  setDurationMonths(60);  setApportPropre(6000)  }
-    if (activeTab === 'CONSO')      { setAmount(10000);  setDurationMonths(36) }
+    handleTabChange(tabMeta)
   }
 
-  const durationYears = Math.round(durationMonths / 12)
-  const needsApport = activeTab !== 'CONSO'
-  //const montantFinance = needsApport ? amount - apportPropre : amount
+  const risk = riskStyle(sim?.simulationRiskLabel)
 
   return (
-    <div style={{ maxWidth: '860px', margin: '0 auto', padding: '32px 16px', fontFamily: "'Segoe UI', sans-serif" }}>
+    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
+      {/* En-tête */}
+      <header className="relative overflow-hidden rounded-2xl border border-blue-100 bg-gradient-to-br from-[#071D49] via-[#0A2463] to-[#1D4ED8] px-6 py-10 text-white shadow-lg sm:px-10">
+        <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-cyan-400/20 blur-3xl" />
+        <div className="absolute -bottom-20 left-1/4 h-40 w-40 rounded-full bg-blue-300/15 blur-3xl" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-blue-100">
+              <Calculator className="h-3.5 w-3.5" />
+              Outil indicatif STB
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Simulateur de crédit</h1>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-blue-100/90">
+              Estimez votre mensualité, le coût total du financement et votre taux d&apos;endettement selon le type de crédit.
+            </p>
+          </div>
+          <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-sm backdrop-blur-sm">
+            <p className="text-blue-100/80">Taux indicatif</p>
+            <p className="text-2xl font-bold tabular-nums">{annualRatePercent} %</p>
+            <p className="text-xs text-blue-100/70">par an — {tabMeta.shortLabel}</p>
+          </div>
+        </div>
+      </header>
 
-      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '26px', fontWeight: 700, color: '#0A2463', marginBottom: '8px' }}>
-          Simulateur de Crédit
-        </h1>
-        <p style={{ fontSize: '14px', color: '#64748B' }}>
-          Estimez votre mensualité selon le type de crédit souhaité
-        </p>
-      </div>
-
-      {/* ONGLETS */}
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
+      {/* Sélecteur type de crédit */}
+      <div className="mt-8 grid gap-3 sm:grid-cols-3">
         {TABS.map((tab) => {
           const active = activeTab === tab.id
+          const Icon = tab.Icon
           return (
             <button
               key={tab.id}
               type="button"
               onClick={() => handleTabChange(tab)}
-              style={{
-                flex: 1, maxWidth: '200px', padding: '16px 12px',
-                background: active ? '#1D4ED8' : 'white',
-                color: active ? 'white' : '#475569',
-                border: `1px solid ${active ? '#1D4ED8' : '#E2E8F0'}`,
-                borderRadius: '10px 10px 0 0',
-                cursor: 'pointer', fontSize: '13px',
-                fontWeight: active ? 600 : 400,
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', gap: '6px',
-                transition: 'all 0.2s',
-              }}
+              className={`group flex flex-col items-start rounded-xl border p-4 text-left transition duration-200 ${
+                active
+                  ? 'border-[#1D4ED8] bg-blue-50 shadow-md shadow-blue-100 ring-2 ring-[#1D4ED8]/20'
+                  : 'border-[#E2E8F0] bg-white hover:border-blue-200 hover:bg-slate-50'
+              }`}
             >
-              <span style={{ fontSize: '28px' }}>{tab.icon}</span>
-              <span>{tab.label}</span>
+              <span
+                className={`mb-3 flex h-10 w-10 items-center justify-center rounded-lg ${
+                  active ? 'bg-[#1D4ED8] text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-blue-100 group-hover:text-blue-700'
+                }`}
+              >
+                <Icon className="h-5 w-5" />
+              </span>
+              <span className={`text-sm font-semibold ${active ? 'text-[#0F172A]' : 'text-slate-700'}`}>
+                {tab.label}
+              </span>
+              <span className="mt-1 text-xs text-slate-500">{tab.hint}</span>
             </button>
           )
         })}
       </div>
 
-      {/* FORMULAIRE */}
-      <div style={{
-        background: 'white', border: '1px solid #E2E8F0',
-        borderTop: 'none', borderRadius: '0 0 12px 12px',
-        padding: '32px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-      }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+      {/* Formulaire */}
+      <section className="mt-6 overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
+        <div className="border-b border-[#E2E8F0] bg-[#F8FAFC] px-6 py-4">
+          <h2 className="text-base font-semibold text-[#0F172A]">Paramètres de simulation</h2>
+          <p className="mt-0.5 text-sm text-[#64748B]">Renseignez les montants en dinars tunisiens (TND).</p>
+        </div>
 
-          <div>
-            <label style={labelStyle}>Montant demandé (TND) <span style={{ color: '#EF4444' }}>*</span></label>
-            <input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value))} style={inputStyle} />
-          </div>
+        <div className="grid gap-5 p-6 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-[#334155]">
+              <Wallet className="h-4 w-4 text-[#64748B]" />
+              Montant demandé <span className="text-red-500">*</span>
+            </span>
+            <input
+              type="number"
+              min={0}
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              className="stb-input tabular-nums"
+            />
+          </label>
 
-          <div>
-            <label style={labelStyle}>Revenu Brut (TND) <span style={{ color: '#EF4444' }}>*</span></label>
-            <input type="number" value={revenuBrut || ''} onChange={(e) => setRevenuBrut(Number(e.target.value))} placeholder="Ex. 3000" style={inputStyle} />
-          </div>
+          <label className="block">
+            <span className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-[#334155]">
+              <TrendingUp className="h-4 w-4 text-[#64748B]" />
+              Revenu brut mensuel <span className="text-red-500">*</span>
+            </span>
+            <input
+              type="number"
+              min={0}
+              value={revenuBrut || ''}
+              onChange={(e) => setRevenuBrut(Number(e.target.value))}
+              placeholder="Ex. 3 000"
+              className="stb-input tabular-nums"
+            />
+          </label>
 
-          <div>
-            <label style={labelStyle}>Mensualités autres financements (TND)</label>
-            <input type="number" value={autresFinancements || ''} onChange={(e) => setAutresFinancements(Number(e.target.value))} placeholder="Ex. 500" style={inputStyle} />
-          </div>
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-[#334155]">
+              Mensualités autres financements
+            </span>
+            <input
+              type="number"
+              min={0}
+              value={autresFinancements || ''}
+              onChange={(e) => setAutresFinancements(Number(e.target.value))}
+              placeholder="Ex. 500"
+              className="stb-input tabular-nums"
+            />
+          </label>
 
           {needsApport && (
-            <div>
-              <label style={labelStyle}>
-                Apport Propre <span style={{ color: '#64748B', fontSize: '11px' }}>(Minimum 20%)</span>{' '}
-                <span style={{ color: '#EF4444' }}>*</span>
-              </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-[#334155]">
+                Apport propre <span className="font-normal text-[#64748B]">(min. 20 %)</span>{' '}
+                <span className="text-red-500">*</span>
+              </span>
               <input
                 type="number"
+                min={0}
                 value={apportPropre || ''}
                 onChange={(e) => setApportPropre(Number(e.target.value))}
-                placeholder={`Min. ${formatTnd(amount * 0.2)}`}
-                style={inputStyle}
+                placeholder={`Min. ${formatTnd(minApport)}`}
+                className={`stb-input tabular-nums ${apportInvalid ? 'border-red-300 ring-red-100' : ''}`}
               />
-              {apportPropre > 0 && apportPropre < amount * 0.2 && (
-                <p style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px' }}>
-                  Minimum requis : {formatTnd(amount * 0.2)}
-                </p>
+              {apportInvalid && (
+                <p className="mt-1.5 text-xs text-red-600">Minimum requis : {formatTnd(minApport)}</p>
               )}
-            </div>
+            </label>
           )}
 
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={labelStyle}>
-              Durée de remboursement :{' '}
-              <strong style={{ color: '#1D4ED8' }}>{durationYears} ans ({durationMonths} mois)</strong>
-            </label>
+          <div className={`${needsApport ? 'sm:col-span-2' : 'sm:col-span-2'} rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4`}>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-medium text-[#334155]">Durée de remboursement</span>
+              <span className="rounded-full bg-[#1D4ED8] px-3 py-1 text-xs font-semibold text-white tabular-nums">
+                {durationYears} ans · {durationMonths} mois
+              </span>
+            </div>
             <input
               type="range"
-              min={activeTab === 'IMMOBILIER' ? 60 : activeTab === 'VEHICULE' ? 12 : 6}
-              max={activeTab === 'IMMOBILIER' ? 300 : activeTab === 'VEHICULE' ? 84 : 60}
-              step={12}
+              min={durationBounds.min}
+              max={durationBounds.max}
+              step={activeTab === 'CONSO' ? 6 : 12}
               value={durationMonths}
               onChange={(e) => setDurationMonths(Number(e.target.value))}
-              style={{ width: '100%', accentColor: '#1D4ED8', height: '6px', cursor: 'pointer' }}
+              className="h-2 w-full cursor-pointer accent-[#1D4ED8]"
             />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>
-              <span>{activeTab === 'IMMOBILIER' ? '5 ans' : activeTab === 'VEHICULE' ? '1 an' : '6 mois'}</span>
-              <span>{activeTab === 'IMMOBILIER' ? '25 ans' : activeTab === 'VEHICULE' ? '7 ans' : '5 ans'}</span>
+            <div className="mt-2 flex justify-between text-xs text-[#94A3B8]">
+              <span>{durationBounds.minLabel}</span>
+              <span>{durationBounds.maxLabel}</span>
             </div>
           </div>
 
-          
-
+          {needsApport && montantFinance > 0 && (
+            <div className="sm:col-span-2 flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50/60 px-4 py-3 text-sm text-blue-900">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+              <p>
+                Montant financé après apport :{' '}
+                <strong className="tabular-nums">{formatTnd(montantFinance)}</strong>
+              </p>
+            </div>
+          )}
         </div>
 
         {error && (
-          <p style={{ marginTop: '16px', fontSize: '13px', color: '#DC2626', padding: '10px 14px', background: '#FEF2F2', borderRadius: '8px', border: '1px solid #FECACA' }}>
-            ⚠️ {error}
-          </p>
+          <div className="mx-6 mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {error}
+          </div>
         )}
 
-        <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
-          <button type="button" onClick={reset} style={{ padding: '10px 24px', borderRadius: '8px', border: '1px solid #CBD5E1', background: 'white', color: '#475569', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
-            EFFACER
+        <div className="flex flex-col-reverse gap-3 border-t border-[#E2E8F0] bg-[#F8FAFC] px-6 py-4 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={reset}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#E2E8F0] bg-white px-5 text-sm font-medium text-[#475569] transition hover:bg-slate-50"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Réinitialiser
           </button>
-          <button type="button" onClick={run} disabled={loading} style={{ padding: '10px 32px', borderRadius: '8px', background: loading ? '#93C5FD' : '#1D4ED8', color: 'white', fontSize: '14px', fontWeight: 600, border: 'none', cursor: loading ? 'not-allowed' : 'pointer' }}>
-            {loading ? 'Calcul…' : 'SIMULER ›'}
+          <button
+            type="button"
+            onClick={run}
+            disabled={loading}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1D4ED8] px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1E40AF] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? 'Calcul en cours…' : 'Lancer la simulation'}
+            {!loading && <ArrowRight className="h-4 w-4" />}
           </button>
         </div>
-      </div>
+      </section>
 
-      {/* RÉSULTATS */}
+      {/* Résultats */}
       {sim && (
-        <div style={{ marginTop: '24px', border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
-          <div style={{ background: '#1D4ED8', padding: '14px 24px' }}>
-            <h3 style={{ color: 'white', fontSize: '15px', fontWeight: 600, textAlign: 'center' }}>Résultats</h3>
+        <section className="mt-8 space-y-5">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-[#1D4ED8]/20 bg-gradient-to-br from-blue-50 to-white p-5 shadow-sm lg:col-span-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Mensualité estimée</p>
+              <p className="mt-2 text-3xl font-bold tabular-nums text-[#1D4ED8]">{formatTnd(sim.monthlyPayment)}</p>
+              <p className="mt-1 text-sm text-[#64748B]">Taux {annualRatePercent} % · {durationMonths} mois</p>
+            </div>
+            <div className="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Total intérêts</p>
+              <p className="mt-2 text-xl font-bold tabular-nums text-[#0F172A]">{formatTnd(sim.totalCostInterest)}</p>
+            </div>
+            <div className="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Total remboursé</p>
+              <p className="mt-2 text-xl font-bold tabular-nums text-[#0F172A]">{formatTnd(sim.totalRepaid)}</p>
+            </div>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white' }}>
-            <tbody>
-              {[
-                { label: 'Mensualité',         value: formatTnd(sim.monthlyPayment),    highlight: true  },
-                { label: 'Total des intérêts', value: formatTnd(sim.totalCostInterest), highlight: false },
-                { label: 'Total remboursé',    value: formatTnd(sim.totalRepaid),       highlight: false },
-                { label: 'Durée',              value: `${durationYears} ans (${durationMonths} mois)`, highlight: false },
-                ...(needsApport ? [{ label: 'Apport propre', value: formatTnd(apportPropre), highlight: false }] : []),
-              ].map((row, i) => (
-                <tr key={row.label} style={{ background: i % 2 === 0 ? '#F8FAFC' : 'white' }}>
-                  <td style={{ padding: '14px 24px', fontSize: '14px', color: '#374151', fontWeight: row.highlight ? 600 : 400, borderBottom: '1px solid #F1F5F9' }}>
-                    {row.label}
-                  </td>
-                  <td style={{ padding: '14px 24px', fontSize: '15px', color: row.highlight ? '#1D4ED8' : '#0F172A', fontWeight: row.highlight ? 700 : 500, textAlign: 'right', borderBottom: '1px solid #F1F5F9' }}>
-                    {row.value}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div style={{ background: '#EFF6FF', padding: '14px 24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '18px' }}>💡</span>
-            <p style={{ fontSize: '13px', color: '#1E40AF' }}>
-              Cette simulation est indicative. Pour soumettre une demande officielle,{' '}
-              <a href="/demande" style={{ fontWeight: 600, color: '#1D4ED8' }}>créez un dossier ici</a>.
-            </p>
-          </div>
-        </div>
-      )}
 
+          <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+            <div className="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-sm">
+              <p className="text-sm font-semibold text-[#0F172A]">Synthèse du dossier simulé</p>
+              <dl className="mt-4 space-y-3 text-sm">
+                <div className="flex justify-between gap-4 border-b border-slate-100 pb-3">
+                  <dt className="text-[#64748B]">Type de crédit</dt>
+                  <dd className="font-medium text-[#0F172A]">{tabMeta.label}</dd>
+                </div>
+                {needsApport && (
+                  <div className="flex justify-between gap-4 border-b border-slate-100 pb-3">
+                    <dt className="text-[#64748B]">Apport propre</dt>
+                    <dd className="font-medium tabular-nums text-[#0F172A]">{formatTnd(apportPropre)}</dd>
+                  </div>
+                )}
+                <div className="flex justify-between gap-4 border-b border-slate-100 pb-3">
+                  <dt className="text-[#64748B]">Capital financé</dt>
+                  <dd className="font-medium tabular-nums text-[#0F172A]">{formatTnd(montantFinance)}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-[#64748B]">Durée</dt>
+                  <dd className="font-medium text-[#0F172A]">
+                    {durationYears} ans ({durationMonths} mois)
+                  </dd>
+                </div>
+              </dl>
+            </div>
+
+            <div className="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-[#0F172A]">Taux d&apos;endettement après prêt</p>
+                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${risk.badge}`}>
+                  Risque {risk.text}
+                </span>
+              </div>
+              <p className="mt-3 text-3xl font-bold tabular-nums text-[#0F172A]">
+                {sim.debtRatioPercent != null ? `${sim.debtRatioPercent} %` : '—'}
+              </p>
+              {sim.recommendations && sim.recommendations.length > 0 && (
+                <ul className="mt-4 space-y-2 border-t border-slate-100 pt-4">
+                  {sim.recommendations.map((rec) => (
+                    <li key={rec} className="flex gap-2 text-sm text-[#475569]">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#1D4ED8]" />
+                      {rec}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4 rounded-2xl border border-blue-100 bg-blue-50/50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm leading-relaxed text-blue-900">
+              Cette simulation est indicative et ne constitue pas une offre de crédit. Pour une demande officielle,
+              créez votre dossier en ligne.
+            </p>
+            <Link
+              to="/demande"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1E40AF]"
+            >
+              Créer une demande
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </section>
+      )}
     </div>
   )
 }
