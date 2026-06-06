@@ -78,18 +78,8 @@ function roleDossiersIntro(role: Role): { title: string; lead: string } {
         title: 'Dossiers — validation agence',
         lead: 'Dossiers en attente de validation chef : orientez vers le comité, une décision ou une demande de modification.',
       }
-    case 'COMITE_CREDIT':
-      return {
-        title: 'Dossiers — comité crédit',
-        lead: 'Traitez les dossiers en validation comité : approbation, refus ou renvoi pour compléments.',
-      }
-    case 'ADMIN':
-      return {
-        title: 'Tous les dossiers',
-        lead: 'Vue exhaustive pour supervision et support. Les transitions restent soumises aux règles métier selon le rôle utilisé.',
-      }
-    default:
-      return { title: 'Dossiers crédit', lead: '' }
+    
+    
   }
 }
 
@@ -107,7 +97,7 @@ export function DossiersPage() {
   const [montantMax, setMontantMax] = useState('')
   const [scoreMin, setScoreMin] = useState('')
   const [scoreMax, setScoreMax] = useState('')
-  const [highAmountOnly, setHighAmountOnly] = useState(false)
+  
   const [sortKey, setSortKey] = useState<SortKey>('updatedAt')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
@@ -148,7 +138,7 @@ export function DossiersPage() {
       if (statusFilter !== 'all' && row.status !== statusFilter) return false
       if (creditTypeFilter !== 'all' && row.creditType !== creditTypeFilter) return false
       if (riskFilter !== 'all' && (row.scoring?.category || '') !== riskFilter) return false
-      if (highAmountOnly && row.amount < 50_000) return false
+      //if (highAmountOnly && row.amount < 50_000) return false
       if (minAmt != null && !Number.isNaN(minAmt) && row.amount < minAmt) return false
       if (maxAmt != null && !Number.isNaN(maxAmt) && row.amount > maxAmt) return false
       const sc = row.scoring?.score
@@ -179,7 +169,7 @@ export function DossiersPage() {
     montantMax,
     scoreMin,
     scoreMax,
-    highAmountOnly,
+    
   ])
 
   function toggleSort(key: SortKey) {
@@ -226,7 +216,8 @@ export function DossiersPage() {
   const showRiskScoreCols = Boolean(user && !isClient)
   /** Tableau simplifié pour l’agent (cahier des charges). */
   const agentCompactCols = user?.role === 'AGENT_BANCAIRE'
-  const showChefAvisCol = user?.role === 'COMITE_CREDIT'
+  const showChefAvisCol = false
+  
 
   return (
     <div className="stb-page stb-stack-tight">
@@ -392,17 +383,8 @@ export function DossiersPage() {
                 </label>
               </>
             )}
-            {user?.role === 'COMITE_CREDIT' && (
-              <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={highAmountOnly}
-                  onChange={(e) => setHighAmountOnly(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-blue-700"
-                />
-                Montants élevés (≥ 50&nbsp;000 TND)
-              </label>
-            )}
+            
+        
           </div>
         </div>
       )}

@@ -95,7 +95,7 @@ export function AccountPage() {
         country,
         nationalId,
       }
-      if (['ADMIN', 'AGENT_BANCAIRE', 'CHEF_AGENCE', 'COMITE_CREDIT'].includes(user.role)) {
+      if ([ 'AGENT_BANCAIRE', 'CHEF_AGENCE'].includes(user.role)) {
         body.staffProfile = { agencyName: agencyName.trim() || undefined }
       }
       await api.patch('/profile', body)

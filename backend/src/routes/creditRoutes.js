@@ -31,7 +31,7 @@ r.patch("/:id/draft", requireRoles(ROLES.CLIENT), updateDraft);
 r.get("/", listMine);
 r.patch(
   "/:id/meta",
-  requireRoles(ROLES.ADMIN, ROLES.AGENT_BANCAIRE, ROLES.CHEF_AGENCE, ROLES.COMITE_CREDIT),
+  requireRoles( ROLES.AGENT_BANCAIRE, ROLES.CHEF_AGENCE),
   updateCreditMeta
 );
 r.get("/:id", getOne);

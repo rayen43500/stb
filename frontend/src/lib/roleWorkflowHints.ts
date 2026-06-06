@@ -17,11 +17,11 @@ export function roleTransitionHints(role: Role): string[] {
       return [
         'EN_VALIDATION_CHEF → EN_VALIDATION_COMITE, APPROUVÉ, REFUSÉ ou À_MODIFIER',
       ]
-    case 'COMITE_CREDIT':
+    //case 'COMITE_CREDIT':
       return [
         'EN_VALIDATION_COMITE → APPROUVÉ, REFUSÉ ou À_MODIFIER',
       ]
-    case 'ADMIN':
+    //case 'ADMIN':
       return ['Tous les changements de statut sont autorisés (supervision et démo).']
     default:
       return []

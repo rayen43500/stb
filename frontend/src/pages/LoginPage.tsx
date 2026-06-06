@@ -2,24 +2,23 @@ import { useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
+
 export function LoginPage() {
   const { login, token } = useAuth()
   const location = useLocation()
-  const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/dashboard'
+  const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/'
+  //const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/dashboard'
   const [email, setEmail] = useState('client@stb.local')
   const [password, setPassword] = useState('ClientSTB!2026')
-  const [showPassword, setShowPassword] = useState(true)
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  
 
-  /** Aligné sur backend/src/seed.js (après `npm run seed`). */
   const demoAccounts = [
     { email: 'client@stb.local', password: 'ClientSTB!2026', role: 'CLIENT' },
     { email: 'agent@stb.local', password: 'AgentSTB!2026', role: 'AGENT' },
     { email: 'chef@stb.local', password: 'ChefSTB!2026', role: 'CHEF_AGENCE' },
-    { email: 'comite@stb.local', password: 'ComiteSTB!2026', role: 'COMITE' },
-    { email: 'admin@stb.local', password: 'AdminSTB!2026', role: 'ADMIN' },
-    { email: 'admin.test.2026@stb.local', password: 'AdminTest!8nQ4', role: 'ADMIN (test)' },
   ] as const
 
   if (token) return <Navigate to={from} replace />
@@ -38,73 +37,183 @@ export function LoginPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md">
-      <div className="stb-card">
-        <h1 className="stb-h1">Connexion</h1>
-        <p className="stb-lead">Accès sécurisé par JWT — session STB.</p>
-        <form className="mt-8 space-y-5" onSubmit={submit}>
+    <div style={{
+      minHeight: '100vh',
+      background: '#EFF6FF',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px 16px',
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '16px',
+        border: '0.5px solid #DBEAFE',
+        padding: '36px 32px',
+        width: '100%',
+        maxWidth: '380px',
+        boxShadow: '0 4px 24px rgba(30, 58, 138, 0.08)',
+      }}>
+
+        {/* Logo STB */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '28px' }}>
+          <img
+            src="/stb-logo.png"
+            alt="STB Bank"
+            style={{ height: '52px', objectFit: 'contain' }}
+          />
+        </div>
+
+        {/* Titre */}
+        <h1 style={{
+          fontSize: '20px',
+          fontWeight: '600',
+          color: '#0F172A',
+          textAlign: 'center',
+          marginBottom: '24px',
+        }}>
+          Connexion
+        </h1>
+
+        {/* Formulaire */}
+        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label className="stb-label">Email</label>
+            <label style={{
+              display: 'block',
+              fontSize: '11px',
+              fontWeight: '500',
+              color: '#64748B',
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              marginBottom: '6px',
+            }}>
+              Email
+            </label>
             <input
               className="stb-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="username"
+              style={{ marginTop: '0' }}
             />
           </div>
+
           <div>
-            <div className="flex items-center justify-between gap-2">
-              <label className="stb-label mb-0">Mot de passe</label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <label style={{
+                fontSize: '11px',
+                fontWeight: '500',
+                color: '#64748B',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+              }}>
+                Mot de passe
+              </label>
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="text-xs font-medium text-blue-700 hover:text-blue-600 hover:underline"
+                style={{
+                  fontSize: '12px',
+                  color: '#1D4ED8',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0',
+                }}
               >
                 {showPassword ? 'Masquer' : 'Afficher'}
               </button>
             </div>
             <input
               type={showPassword ? 'text' : 'password'}
-              className="stb-input mt-1"
+              className="stb-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
+              style={{ marginTop: '0' }}
             />
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button type="submit" disabled={loading} className="stb-btn-primary w-full py-3">
+
+          {error && (
+            <p style={{ fontSize: '13px', color: '#DC2626', textAlign: 'center' }}>
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: '100%',
+              background: '#1D4ED8',
+              color: 'white',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '12px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.7 : 1,
+              marginTop: '4px',
+            }}
+          >
             {loading ? 'Connexion…' : 'Se connecter'}
           </button>
         </form>
-        <details className="mt-6 rounded-lg border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm">
-          <summary className="cursor-pointer font-medium text-slate-700">
-            Comptes de démonstration (mots de passe — après seed)
+
+        {/* Comptes demo */}
+        <details style={{ marginTop: '20px' }}>
+          <summary style={{
+            fontSize: '12px',
+            color: '#64748B',
+            cursor: 'pointer',
+            padding: '8px 12px',
+            background: '#F8FAFC',
+            borderRadius: '8px',
+            border: '0.5px solid #E2E8F0',
+          }}>
+            Comptes de démonstration
           </summary>
-          <p className="mt-2 text-xs text-slate-500">
-            Créés par <code className="rounded bg-white px-1 py-0.5 text-slate-600">npm run seed</code> dans le dossier
-            backend.
-          </p>
-          <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto text-xs">
+          <ul style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {demoAccounts.map((row) => (
               <li
                 key={row.email}
-                className="flex flex-col gap-0.5 rounded-md bg-white px-2 py-2 ring-1 ring-slate-100 sm:flex-row sm:items-center sm:justify-between"
+                style={{
+                  fontSize: '12px',
+                  padding: '8px 10px',
+                  background: '#F8FAFC',
+                  borderRadius: '8px',
+                  border: '0.5px solid #E2E8F0',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                }}
+                onClick={() => setEmail(row.email)}
               >
-                <span className="text-slate-700">
-                  <span className="font-mono text-slate-900">{row.email}</span>
-                  <span className="ml-2 text-slate-400">({row.role})</span>
+                <span style={{ color: '#0F172A', fontFamily: 'monospace' }}>{row.email}</span>
+                <span style={{
+                  fontSize: '11px',
+                  background: '#EFF6FF',
+                  color: '#1D4ED8',
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                }}>
+                  {row.role}
                 </span>
-                <code className="shrink-0 font-mono text-slate-800">{row.password}</code>
               </li>
             ))}
           </ul>
         </details>
-        <p className="mt-6 text-center text-sm text-slate-500">
+
+        {/* Lien inscription */}
+        <p style={{ marginTop: '20px', textAlign: 'center', fontSize: '13px', color: '#64748B' }}>
           Pas de compte ?{' '}
-          <Link className="stb-link" to="/register">
+          <Link to="/register" style={{ color: '#1D4ED8', fontWeight: '500' }}>
             Créer un profil client
           </Link>
         </p>
+
       </div>
     </div>
   )

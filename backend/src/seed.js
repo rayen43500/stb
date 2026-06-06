@@ -4,20 +4,7 @@ import bcrypt from "bcryptjs";
 import User, { ROLES } from "./models/User.js";
 
 const demoUsers = [
-  {
-    email: process.env.SEED_ADMIN_EMAIL || "admin@stb.local",
-    password: process.env.SEED_ADMIN_PASSWORD || "AdminSTB!2026",
-    role: ROLES.ADMIN,
-    firstName: "Admin",
-    lastName: "STB",
-  },
-  {
-    email: "admin.test.2026@stb.local",
-    password: "AdminTest!8nQ4",
-    role: ROLES.ADMIN,
-    firstName: "Test",
-    lastName: "Admin",
-  },
+  
   {
     email: "client@stb.local",
     password: "ClientSTB!2026",
@@ -52,13 +39,8 @@ const demoUsers = [
     matricule: "CHF-001",
     staffProfile: { agencyName: "Agence Tunis Centre" },
   },
-  {
-    email: "comite@stb.local",
-    password: "ComiteSTB!2026",
-    role: ROLES.COMITE_CREDIT,
-    firstName: "Membre",
-    lastName: "Comité",
-  },
+  
+   
 ];
 
 async function run() {

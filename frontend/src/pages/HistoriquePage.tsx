@@ -51,8 +51,7 @@ function roleDisplay(role: string): string {
     CLIENT: 'Client',
     AGENT_BANCAIRE: 'Agent',
     CHEF_AGENCE: 'Chef d’agence',
-    COMITE_CREDIT: 'Comité crédit',
-    ADMIN: 'Administration',
+    
   }
   return map[role] || roleLabelFr[role as Role] || role
 }

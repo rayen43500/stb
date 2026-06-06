@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Bell, ChevronDown, LogOut, Menu, Search, User } from 'lucide-react'
+import { Bell, ChevronDown, LogOut, Menu, Search } from 'lucide-react'
+//import { Bell, ChevronDown, LogOut, Menu, Search, User } from 'lucide-react'
 import { api } from '../../lib/api'
 import { roleLabelFr } from '../../lib/roleLabels'
 import type { SafeUser } from '../../types'
@@ -163,14 +164,7 @@ export function AppTopbar({ title, user, avatarSrc, notifCount, onOpenMobileNav,
           </button>
           {menuOpen ? (
             <div className="absolute right-0 top-full z-50 mt-2 w-52 rounded-xl border border-[#E2E8F0] bg-white py-1 shadow-lg shadow-slate-900/10">
-              <Link
-                to="/compte"
-                className="flex items-center gap-2 px-3 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC]"
-                onClick={() => setMenuOpen(false)}
-              >
-                <User className="h-4 w-4 text-[#64748B]" />
-                Mon profil
-              </Link>
+              
               <button
                 type="button"
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#EF4444] hover:bg-red-50"

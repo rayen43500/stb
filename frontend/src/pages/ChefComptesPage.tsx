@@ -69,7 +69,7 @@ export function ChefComptesPage() {
   }
 
   useEffect(() => {
-    if (user?.role !== 'CHEF_AGENCE' && user?.role !== 'ADMIN') return
+    if (user?.role !== 'CHEF_AGENCE' ) return
     loadPending().catch(() => setErr('Chargement impossible'))
     loadAgents().catch(() => {})
     loadReport().catch(() => {})
@@ -123,8 +123,8 @@ export function ChefComptesPage() {
     }
   }
 
-  if (user?.role !== 'CHEF_AGENCE' && user?.role !== 'ADMIN') {
-    return <p className="text-red-600">Accès réservé au chef d&apos;agence.</p>
+  if (user?.role !== 'CHEF_AGENCE' ) {
+    return <p className="text-red-600">Accès réservé au chef agence.</p>
   }
 
   const tabs = [
@@ -268,7 +268,7 @@ export function ChefComptesPage() {
               <select className="stb-input" value={staffForm.role} onChange={(e) => setStaffForm((f) => ({ ...f, role: e.target.value as Role }))}>
                 <option value="AGENT_BANCAIRE">Agent bancaire</option>
                 <option value="CHEF_AGENCE">Chef d&apos;agence</option>
-                <option value="COMITE_CREDIT">Comité crédit</option>
+                
               </select>
             </div>
             <div>

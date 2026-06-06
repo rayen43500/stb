@@ -5,7 +5,7 @@ import { ROLES } from "../models/User.js";
 
 const r = Router();
 
-r.use(authRequired, loadUser, requireRoles(ROLES.ADMIN));
+r.use(authRequired, loadUser, requireRoles(ROLES.CHEF_AGENCE));
 
 r.get("/", listAuditLogs);
 

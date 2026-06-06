@@ -49,33 +49,25 @@ type NotifRow = {
   createdAt?: string
 }
 
-const staffRoles: Role[] = ['ADMIN', 'AGENT_BANCAIRE', 'CHEF_AGENCE', 'COMITE_CREDIT']
+const staffRoles: Role[] = [ 'AGENT_BANCAIRE', 'CHEF_AGENCE']
 
 function workflowHints(role: Role): string[] {
-  const hints: Record<Role, string[]> = {
+  const hints: Partial<Record<Role, string[]>> = {
     CLIENT: [
-      'Créez un brouillon, ajoutez vos pièces puis soumettez pour lancer l’analyse.',
-      'Consultez l’analyse de risque et l’historique des commentaires sur chaque dossier.',
+      'Créez un brouillon, ajoutez vos pièces puis soumettez pour lancer l\'analyse.',
+      'Consultez l\'analyse de risque et l\'historique des commentaires sur chaque dossier.',
       'Complétez votre profil financier dans Paramètres pour des simulations plus précises.',
     ],
     AGENT_BANCAIRE: [
       'Traitez la file des dossiers : statuts, transitions et commentaires obligatoires.',
-      'Utilisez la simulation pour répondre aux clients et l’assistant pour le FAQ métier.',
+      'Utilisez la simulation pour répondre aux clients et l\'assistant pour le FAQ métier.',
     ],
     CHEF_AGENCE: [
-      'Validez les dossiers en « validation chef » avant l’envoi au comité.',
-      'Supervisez l’activité de l’agence via la liste centralisée des dossiers.',
-    ],
-    COMITE_CREDIT: [
-      'Examinez les dossiers en « validation comité » et enregistrez vos décisions tracées.',
-      'Les statistiques globales aident à suivre le volume et les décisions.',
-    ],
-    ADMIN: [
-      'Gérez les rôles utilisateurs, consultez l’audit et l’ensemble des dossiers.',
-      'Surveillez les indicateurs agrégés (dossiers, taux d’acceptation).',
+      'Validez les dossiers en « validation chef » avant envoi pour décision.',
+      'Supervisez l\'activité de l\'agence via la liste centralisée des dossiers.',
     ],
   }
-  return hints[role]
+  return hints[role] ?? []
 }
 
 export function DashboardPage() {
@@ -270,21 +262,12 @@ export function DashboardPage() {
             >
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Dossiers</div>
               <div className="mt-2 font-medium text-slate-900">
-                {user.role === 'ADMIN' ? 'Vue globale' : 'File de traitement'}
+                
               </div>
               <p className="mt-1 text-sm text-slate-600">Liste selon vos droits et transitions autorisées.</p>
             </Link>
           )}
-          {user.role === 'ADMIN' && (
-            <Link
-              to="/admin"
-              className="rounded-xl border border-amber-200 bg-[#FFFBEB] p-6 transition hover:border-amber-300 hover:bg-amber-50/80"
-            >
-              <div className="text-xs font-semibold uppercase tracking-wide text-amber-800">Administration</div>
-              <div className="mt-2 font-medium text-amber-950">Utilisateurs & rôles</div>
-              <p className="mt-1 text-sm text-amber-900/80">Gestion des comptes et audit.</p>
-            </Link>
-          )}
+          
           <Link
             to="/compte"
             className="stb-card-muted transition hover:border-[#94A3B8]/50 hover:bg-[#F8FAFC]"

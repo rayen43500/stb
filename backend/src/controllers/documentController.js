@@ -13,9 +13,9 @@ async function canAccessCredit(req, creditId) {
   if (
     req.userRole === ROLES.CLIENT ||
     req.userRole === ROLES.AGENT_BANCAIRE ||
-    req.userRole === ROLES.CHEF_AGENCE ||
-    req.userRole === ROLES.COMITE_CREDIT ||
-    req.userRole === ROLES.ADMIN
+    req.userRole === ROLES.CHEF_AGENCE 
+    
+ 
   ) {
     return doc;
   }
@@ -94,8 +94,8 @@ export async function removeDocument(req, res, next) {
     if (!credit) return res.status(403).json({ message: "Accès refusé" });
 
     const isOwner = d.uploadedBy.toString() === req.userId;
-    const isAdmin = req.userRole === ROLES.ADMIN;
-    if (!isOwner && !isAdmin) return res.status(403).json({ message: "Suppression non autorisée" });
+    const isChef = req.userRole === ROLES.CHEF_AGENCE;
+    if (!isOwner && !isChef) return res.status(403).json({ message: "Suppression non autorisée" });
 
     const fullPath = path.join(creditsDir, d.storedName);
     fs.unlink(fullPath, () => {});

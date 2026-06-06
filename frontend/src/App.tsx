@@ -10,10 +10,10 @@ import { SimulationPage } from './pages/SimulationPage'
 import { DemandePage } from './pages/DemandePage'
 import { DossiersPage } from './pages/DossiersPage'
 import { CreditDetailPage } from './pages/CreditDetailPage'
-import { AdminPage } from './pages/AdminPage'
+
 import { AssistantPage } from './pages/AssistantPage'
 import { HomePage } from './pages/HomePage'
-import { AccountPage } from './pages/AccountPage'
+//import { AccountPage } from './pages/AccountPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { HistoriquePage } from './pages/HistoriquePage'
 import { DocumentsHubPage } from './pages/DocumentsHubPage'
@@ -39,14 +39,8 @@ export default function App() {
               </RequireAuth>
             }
           />
-          <Route
-            path="compte"
-            element={
-              <RequireAuth>
-                <AccountPage />
-              </RequireAuth>
-            }
-          />
+          
+          
           <Route
             path="demande"
             element={
@@ -97,21 +91,13 @@ export default function App() {
               </RequireAuth>
             }
           />
-          <Route
-            path="admin"
-            element={
-              <RequireAuth>
-                <RequireRole roles={['ADMIN']}>
-                  <AdminPage />
-                </RequireRole>
-              </RequireAuth>
-            }
-          />
+          
+          
           <Route
             path="chef/comptes"
             element={
               <RequireAuth>
-                <RequireRole roles={['CHEF_AGENCE', 'ADMIN']}>
+                <RequireRole roles={['CHEF_AGENCE']}>
                   <ChefComptesPage />
                 </RequireRole>
               </RequireAuth>

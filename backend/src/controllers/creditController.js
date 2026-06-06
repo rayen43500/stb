@@ -273,10 +273,10 @@ export async function updateCreditMeta(req, res, next) {
     if (!doc) return res.status(404).json({ message: "Dossier introuvable" });
 
     const staffRoles = [
-      ROLES.ADMIN,
+      
       ROLES.AGENT_BANCAIRE,
       ROLES.CHEF_AGENCE,
-      ROLES.COMITE_CREDIT,
+      
     ];
     if (!staffRoles.includes(req.userRole)) {
       return res.status(403).json({ message: "Réservé au personnel banque" });
@@ -287,7 +287,7 @@ export async function updateCreditMeta(req, res, next) {
       doc.creditType = creditType;
     }
 
-    const canEditDocs = req.userRole === ROLES.ADMIN || req.userRole === ROLES.AGENT_BANCAIRE;
+    const canEditDocs = req.userRole === ROLES.AGENT_BANCAIRE;
     if (documentVerification && typeof documentVerification === "object" && canEditDocs) {
       doc.documentVerification = doc.documentVerification || {};
       for (const key of ["cin", "payslip", "contract", "bankStatement"]) {
@@ -298,7 +298,7 @@ export async function updateCreditMeta(req, res, next) {
       doc.markModified("documentVerification");
     }
 
-    const canEditIncidents = req.userRole === ROLES.ADMIN || req.userRole === ROLES.AGENT_BANCAIRE;
+    const canEditIncidents =  req.userRole === ROLES.AGENT_BANCAIRE;
     if (canEditIncidents && (bankingIncidents != null || priorDefaults != null)) {
       const applicant = await User.findById(doc.applicantId);
       if (applicant) {

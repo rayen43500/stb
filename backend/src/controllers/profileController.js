@@ -31,7 +31,7 @@ export async function updateProfile(req, res, next) {
     if (body.dateOfBirth !== undefined) {
       u.dateOfBirth = body.dateOfBirth ? new Date(body.dateOfBirth) : undefined;
     }
-    const staffRoles = [ROLES.ADMIN, ROLES.AGENT_BANCAIRE, ROLES.CHEF_AGENCE, ROLES.COMITE_CREDIT];
+    const staffRoles = [ ROLES.AGENT_BANCAIRE, ROLES.CHEF_AGENCE];
     if (staffRoles.includes(req.userRole) && body.staffProfile?.agencyName !== undefined) {
       u.staffProfile = u.staffProfile || {};
       u.staffProfile.agencyName = trimOrUndef(body.staffProfile.agencyName);

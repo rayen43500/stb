@@ -121,7 +121,7 @@ export async function createStaffAccount(req, res, next) {
     if (!email || !firstName || !lastName || !matricule) {
       return res.status(400).json({ message: "Email, nom, prénom et matricule requis" });
     }
-    const allowedRoles = [ROLES.AGENT_BANCAIRE, ROLES.CHEF_AGENCE, ROLES.COMITE_CREDIT];
+    const allowedRoles = [ROLES.AGENT_BANCAIRE, ROLES.CHEF_AGENCE];
     const finalRole = allowedRoles.includes(role) ? role : ROLES.AGENT_BANCAIRE;
 
     const existing = await User.findOne({ email: email.toLowerCase().trim() });

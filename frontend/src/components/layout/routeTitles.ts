@@ -10,7 +10,7 @@ export function pageTitleForPath(pathname: string): string {
   if (pathname.startsWith('/documents')) return 'Documents'
   if (pathname.startsWith('/simulation')) return 'Simulation crédit'
   if (pathname.startsWith('/assistant')) return 'Assistant'
-  if (pathname.startsWith('/compte')) return 'Paramètres du compte'
+ // if (pathname.startsWith('/compte')) return 'Paramètres du compte'
   if (pathname.startsWith('/admin')) return 'Administration'
   if (pathname.startsWith('/login')) return 'Connexion'
   if (pathname.startsWith('/register')) return 'Inscription'

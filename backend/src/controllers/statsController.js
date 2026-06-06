@@ -93,26 +93,8 @@ export async function workspaceStats(req, res, next) {
         dossiersRefuses: refused,
         montantTotalAccorde,
       };
-    } else if (role === ROLES.COMITE_CREDIT) {
-      kpis = {
-        attenteDecisionFinale: statusMap["EN_VALIDATION_COMITE"] || 0,
-        dossiersApprouves: approved,
-        dossiersRefuses: refused,
-        montantTotalAccorde,
-      };
-    } else if (role === ROLES.ADMIN) {
-      kpis = {
-        dossiersRecus: statusMap["SOUMIS"] || 0,
-        enAttente: statusMap["SOUMIS"] || 0,
-        envoyesScoring: statusMap["EN_ANALYSE"] || 0,
-        retournesClient: statusMap["À_MODIFIER"] || 0,
-        attenteValidationChef: statusMap["EN_VALIDATION_CHEF"] || 0,
-        attenteComite: statusMap["EN_VALIDATION_COMITE"] || 0,
-        dossiersApprouves: approved,
-        dossiersRefuses: refused,
-        montantTotalAccorde,
-      };
-    }
+    } 
+  
 
     res.json({
       role,
@@ -129,10 +111,10 @@ export async function workspaceStats(req, res, next) {
 }
 
 export const statsRoles = [
-  ROLES.ADMIN,
+  
   ROLES.AGENT_BANCAIRE,
   ROLES.CHEF_AGENCE,
-  ROLES.COMITE_CREDIT,
+  
 ];
 
 /** KPI tableau de bord client. */
@@ -149,10 +131,10 @@ export async function clientDashboard(req, res, next) {
         approuvees += 1;
         montantTotal += c.amount || 0;
       }
-      if (["SOUMIS", "EN_ANALYSE", "EN_VALIDATION_CHEF", "EN_VALIDATION_COMITE", "À_MODIFIER"].includes(c.status)) {
+      if (["SOUMIS", "EN_ANALYSE", "EN_VALIDATION_CHEF",  "À_MODIFIER"].includes(c.status)) {
         demandesActives += 1;
       }
-      if (["SOUMIS", "EN_ANALYSE", "EN_VALIDATION_CHEF", "EN_VALIDATION_COMITE"].includes(c.status)) {
+      if (["SOUMIS", "EN_ANALYSE", "EN_VALIDATION_CHEF", ].includes(c.status)) {
         enAttente += 1;
       }
     }

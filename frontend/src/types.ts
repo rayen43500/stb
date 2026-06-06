@@ -2,8 +2,7 @@ export type Role =
   | 'CLIENT'
   | 'AGENT_BANCAIRE'
   | 'CHEF_AGENCE'
-  | 'COMITE_CREDIT'
-  | 'ADMIN'
+  
 
 export type SafeUser = {
   id: string
