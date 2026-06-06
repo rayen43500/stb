@@ -1,5 +1,13 @@
 import CreditRequest from "../models/CreditRequest.js";
 import User, { ROLES } from "../models/User.js";
+import {
+  AGENT_STATUS_FILTER,
+  CHEF_STATUS_FILTER,
+  aggregateAmountByMonth,
+  aggregateByMonth,
+  filterStatusMap,
+  scoreDistributionFromCredits,
+} from "../utils/statsCharts.js";
 
 export async function dashboardStats(req, res, next) {
   try {
@@ -75,6 +83,20 @@ export async function workspaceStats(req, res, next) {
     const decided = approved + refused;
     const acceptanceRate = decided === 0 ? null : Math.round((approved / decided) * 1000) / 10;
 
+    const byMonth = await aggregateByMonth();
+    const amountByMonth = await aggregateAmountByMonth({ status: "APPROUVÉ" });
+    const allScored = await CreditRequest.find({ "scoring.score": { $ne: null } })
+      .select("scoring.score")
+      .lean();
+    const scoreDistribution = scoreDistributionFromCredits(allScored);
+
+    let roleStatusMap = statusMap;
+    if (role === ROLES.AGENT_BANCAIRE) {
+      roleStatusMap = filterStatusMap(statusMap, AGENT_STATUS_FILTER);
+    } else if (role === ROLES.CHEF_AGENCE) {
+      roleStatusMap = filterStatusMap(statusMap, CHEF_STATUS_FILTER);
+    }
+
     let kpis = {};
     if (role === ROLES.AGENT_BANCAIRE) {
       const soumis = statusMap["SOUMIS"] || 0;
@@ -107,8 +129,12 @@ export async function workspaceStats(req, res, next) {
       role,
       kpis,
       statusMap,
+      roleStatusMap,
       byRisk,
       byCreditType,
+      byMonth,
+      amountByMonth,
+      scoreDistribution,
       acceptanceRate,
       recent,
     });
@@ -124,29 +150,58 @@ export const statsRoles = [
   ROLES.ADMIN,
 ];
 
-/** KPI tableau de bord client. */
+/** KPI + données graphiques tableau de bord client. */
 export async function clientDashboard(req, res, next) {
   try {
-    const credits = await CreditRequest.find({ applicantId: req.userId }).lean();
+    const match = { applicantId: req.userId };
+    const credits = await CreditRequest.find(match).lean();
     let demandesActives = 0;
     let enAttente = 0;
     let approuvees = 0;
     let montantTotal = 0;
+    const statusMap = {};
+    const byCreditType = {};
+    const byRisk = {};
 
     for (const c of credits) {
+      statusMap[c.status] = (statusMap[c.status] || 0) + 1;
+      const t = c.creditType || "CONSO";
+      byCreditType[t] = (byCreditType[t] || 0) + 1;
+      const risk = c.scoring?.category;
+      if (risk) byRisk[risk] = (byRisk[risk] || 0) + 1;
+
       if (c.status === "APPROUVÉ") {
         approuvees += 1;
         montantTotal += c.amount || 0;
       }
-      if (["SOUMIS", "EN_ANALYSE", "EN_VALIDATION_CHEF",  "À_MODIFIER"].includes(c.status)) {
+      if (["SOUMIS", "EN_ANALYSE", "EN_VALIDATION_CHEF", "À_MODIFIER"].includes(c.status)) {
         demandesActives += 1;
       }
-      if (["SOUMIS", "EN_ANALYSE", "EN_VALIDATION_CHEF", ].includes(c.status)) {
+      if (["SOUMIS", "EN_ANALYSE", "EN_VALIDATION_CHEF"].includes(c.status)) {
         enAttente += 1;
       }
     }
 
-    res.json({ demandesActives, enAttente, approuvees, montantTotal, total: credits.length });
+    const byMonth = await aggregateByMonth(match);
+    const amountByMonth = await aggregateAmountByMonth({ ...match, status: "APPROUVÉ" });
+    const scoreDistribution = scoreDistributionFromCredits(credits);
+    const decided = approuvees + (statusMap["REFUSÉ"] || 0);
+    const acceptanceRate = decided === 0 ? null : Math.round((approuvees / decided) * 1000) / 10;
+
+    res.json({
+      demandesActives,
+      enAttente,
+      approuvees,
+      montantTotal,
+      total: credits.length,
+      statusMap,
+      byCreditType,
+      byRisk,
+      byMonth,
+      amountByMonth,
+      scoreDistribution,
+      acceptanceRate,
+    });
   } catch (e) {
     next(e);
   }

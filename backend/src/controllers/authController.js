@@ -2,8 +2,8 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User, { ROLES } from "../models/User.js";
-import { sendOptionalEmail } from "../utils/mail.js";
 import { notifyStaffByRole } from "../utils/notify.js";
+import { sendClientActivationEmail } from "../utils/activationEmail.js";
 
 function signToken(user) {
   return jwt.sign({ sub: user._id.toString(), role: user.role }, process.env.JWT_SECRET, {
@@ -15,7 +15,17 @@ function generateActivationCode() {
   return crypto.randomInt(100000, 999999).toString();
 }
 
-/** Inscription client publique — compte en attente validation chef. */
+const ACTIVATION_TTL_MS = 48 * 60 * 60 * 1000;
+
+async function issueActivationCode(user) {
+  const code = generateActivationCode();
+  user.activationCode = code;
+  user.activationCodeExpires = new Date(Date.now() + ACTIVATION_TTL_MS);
+  await user.save();
+  return code;
+}
+
+/** Inscription client publique — email de vérification avec lien SMTP. */
 export async function register(req, res, next) {
   try {
     const { email, password, firstName, lastName, phone, nationalId, dateOfBirth } = req.body;
@@ -43,25 +53,63 @@ export async function register(req, res, next) {
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
     });
 
+    const code = await issueActivationCode(user);
+    const emailSent = await sendClientActivationEmail(user, code, { reason: "registration" });
+
     await notifyStaffByRole(ROLES.CHEF_AGENCE, {
       type: "CLIENT_REGISTRATION",
       title: "Nouvelle inscription client",
-      message: `${firstName} ${lastName} (${email}) attend validation.`,
+      message: `${firstName} ${lastName} (${email}) — vérification email en cours.`,
       link: "/chef/comptes",
     });
 
     res.status(201).json({
-      message:
-        "Inscription enregistrée. Le chef d'agence doit valider votre compte. Vous recevrez un code d'activation par email.",
+      message: emailSent
+        ? "Inscription enregistrée. Consultez votre email et cliquez sur le lien pour activer votre compte."
+        : "Inscription enregistrée. Email non configuré (SMTP) : utilisez la page d'activation avec le code affiché en console serveur.",
       pending: true,
       userId: user._id.toString(),
+      emailSent,
+      ...(process.env.NODE_ENV !== "production" && !emailSent ? { devCode: code } : {}),
     });
   } catch (e) {
     next(e);
   }
 }
 
-/** Activation du compte avec code reçu par email + définition du mot de passe. */
+/** Renvoyer l'email de vérification (compte PENDING). */
+export async function resendActivation(req, res, next) {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email requis" });
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.json({ message: "Si un compte existe, un email de vérification a été envoyé." });
+    }
+    if (user.accountStatus === "ACTIVE") {
+      return res.status(400).json({ message: "Compte déjà activé — connectez-vous" });
+    }
+    if (user.accountStatus === "REJECTED") {
+      return res.status(403).json({ message: "Inscription refusée par l'agence" });
+    }
+
+    const code = await issueActivationCode(user);
+    const emailSent = await sendClientActivationEmail(user, code, { reason: "resend" });
+
+    res.json({
+      message: emailSent
+        ? "Email de vérification renvoyé. Consultez votre boîte de réception."
+        : "SMTP non configuré — contactez l'administrateur.",
+      emailSent,
+      ...(process.env.NODE_ENV !== "production" && !emailSent ? { devCode: code } : {}),
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/** Activation du compte avec code (lien email) + définition du mot de passe. */
 export async function activateAccount(req, res, next) {
   try {
     const { email, code, password } = req.body;
@@ -82,7 +130,7 @@ export async function activateAccount(req, res, next) {
       return res.status(400).json({ message: "Code d'activation invalide" });
     }
     if (user.activationCodeExpires && user.activationCodeExpires < new Date()) {
-      return res.status(400).json({ message: "Code expiré — contactez votre agence" });
+      return res.status(400).json({ message: "Lien expiré — demandez un nouvel email de vérification" });
     }
 
     user.passwordHash = await bcrypt.hash(String(password), 10);
@@ -108,7 +156,7 @@ export async function login(req, res, next) {
     if (user.accountStatus === "PENDING") {
       return res.status(403).json({
         message:
-          "Compte en attente de validation par le chef d'agence. Utilisez le lien d'activation après réception du code.",
+          "Compte non vérifié. Consultez votre email et cliquez sur le lien d'activation, ou renvoyez l'email de vérification.",
         pending: true,
       });
     }

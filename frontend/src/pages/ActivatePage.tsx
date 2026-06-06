@@ -1,22 +1,34 @@
-import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { api } from '../lib/api'
 
 export function ActivatePage() {
   const { activate, token } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [resending, setResending] = useState(false)
+
+  useEffect(() => {
+    const qEmail = searchParams.get('email')
+    const qCode = searchParams.get('code')
+    if (qEmail) setEmail(qEmail)
+    if (qCode) setCode(qCode)
+  }, [searchParams])
 
   if (token) return <Navigate to="/" replace />
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    setInfo(null)
     if (password !== confirm) {
       setError('Les mots de passe ne correspondent pas')
       return
@@ -41,12 +53,39 @@ export function ActivatePage() {
     }
   }
 
+  async function resendEmail() {
+    if (!email.trim()) {
+      setError('Saisissez votre email pour renvoyer le lien')
+      return
+    }
+    setResending(true)
+    setError(null)
+    setInfo(null)
+    try {
+      const { data } = await api.post<{ message?: string }>('/auth/resend-activation', { email: email.trim() })
+      setInfo(data.message || 'Email renvoyé si le compte existe.')
+    } catch (err: unknown) {
+      let msg = 'Envoi impossible'
+      if (typeof err === 'object' && err !== null && 'response' in err) {
+        const data = (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        if (data) msg = String(data)
+      }
+      setError(msg)
+    } finally {
+      setResending(false)
+    }
+  }
+
+  const fromLink = Boolean(searchParams.get('code'))
+
   return (
     <div className="mx-auto max-w-md">
       <div className="stb-card">
         <h1 className="stb-h1">Activer mon compte</h1>
         <p className="stb-lead">
-          Saisissez le code reçu par email après validation de votre inscription, puis définissez votre mot de passe.
+          {fromLink
+            ? 'Lien de vérification détecté. Définissez votre mot de passe pour finaliser l\'activation.'
+            : 'Saisissez le code reçu par email ou ouvrez directement le lien de vérification.'}
         </p>
         <form className="mt-8 space-y-5" onSubmit={submit}>
           <div>
@@ -91,11 +130,22 @@ export function ActivatePage() {
             />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
+          {info && <p className="text-sm text-emerald-700">{info}</p>}
           <button type="submit" disabled={loading} className="stb-btn-primary w-full py-3">
             {loading ? 'Activation…' : 'Activer et se connecter'}
           </button>
         </form>
-        <p className="mt-6 text-center text-sm text-slate-500">
+        <div className="mt-6 border-t border-slate-200 pt-4 text-center">
+          <button
+            type="button"
+            disabled={resending}
+            onClick={resendEmail}
+            className="text-sm font-semibold text-[#1D4ED8] hover:underline disabled:opacity-50"
+          >
+            {resending ? 'Envoi…' : 'Renvoyer l\'email de vérification'}
+          </button>
+        </div>
+        <p className="mt-4 text-center text-sm text-slate-500">
           <Link className="stb-link" to="/register">
             Pas encore inscrit ?
           </Link>

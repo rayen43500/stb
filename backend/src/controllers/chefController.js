@@ -4,6 +4,7 @@ import PDFDocument from "pdfkit";
 import User, { ROLES } from "../models/User.js";
 import CreditRequest from "../models/CreditRequest.js";
 import { sendOptionalEmail } from "../utils/mail.js";
+import { sendClientActivationEmail } from "../utils/activationEmail.js";
 import { notifyUser } from "../utils/notify.js";
 import { writeAudit } from "../utils/audit.js";
 
@@ -43,13 +44,7 @@ export async function approveClient(req, res, next) {
     user.activationCodeExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await user.save();
 
-    const msg = `Bonjour ${user.firstName || ""},\n\nVotre inscription STB Crédits a été validée.\nCode d'activation : ${code}\n\nRendez-vous sur le portail, page « Activer mon compte », saisissez ce code et définissez votre mot de passe.\n\nCordialement,\nVotre agence STB`;
-
-    await sendOptionalEmail({
-      to: user.email,
-      subject: "STB Crédits — Code d'activation de votre compte",
-      text: msg,
-    });
+    await sendClientActivationEmail(user, code, { reason: "resend" });
 
     await notifyUser(user._id, {
       type: "ACCOUNT_APPROVED",

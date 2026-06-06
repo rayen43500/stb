@@ -18,16 +18,25 @@ function getTransport() {
   return transporter;
 }
 
-export async function sendOptionalEmail({ to, subject, text }) {
+export async function sendOptionalEmail({ to, subject, text, html }) {
   const t = getTransport();
   if (!t || !to) {
-    if (subject) console.log(`[email stub] to=${to} subject=${subject}`);
-    return;
+    if (subject) {
+      console.log(`[email stub] to=${to} subject=${subject}`);
+      if (text) console.log(text);
+    }
+    return false;
   }
   await t.sendMail({
     from: process.env.SMTP_FROM || "noreply@stb.local",
     to,
     subject,
     text,
+    html: html || undefined,
   });
+  return true;
+}
+
+export function frontendBaseUrl() {
+  return (process.env.FRONTEND_URL || "http://127.0.0.1:5173").replace(/\/$/, "");
 }

@@ -11,7 +11,7 @@ import { creditTypeLabel } from '../lib/creditTypeLabels'
 import type { Role } from '../types'
 import type { SafeUser } from '../types'
 import { PublicLandingPage } from './PublicLandingPage'
-import { PortfolioCharts } from '../components/dashboard/WorkspaceCharts'
+import { ClientDashboardCharts, StaffDashboardCharts } from '../components/dashboard/WorkspaceCharts'
 //const PAGE_SIZE = 6
 
 //type NotifRow = {
@@ -25,7 +25,13 @@ type WorkspacePayload = {
   role: Role
   kpis: Record<string, number>
   statusMap: Record<string, number>
+  roleStatusMap?: Record<string, number>
   byCreditType: Record<string, number>
+  byRisk?: Record<string, number>
+  byMonth?: Record<string, number>
+  amountByMonth?: Record<string, number>
+  scoreDistribution?: Record<string, number>
+  acceptanceRate?: number | null
   recent: Array<{
     _id: string
     status: string
@@ -41,6 +47,13 @@ type ClientStats = {
   approuvees: number
   montantTotal: number
   total: number
+  statusMap?: Record<string, number>
+  byCreditType?: Record<string, number>
+  byRisk?: Record<string, number>
+  byMonth?: Record<string, number>
+  amountByMonth?: Record<string, number>
+  scoreDistribution?: Record<string, number>
+  acceptanceRate?: number | null
 }
 
 //const shellCard =
@@ -406,6 +419,10 @@ function ClientHome({ user }: { user: SafeUser }) {
         ))}
       </div>
 
+      {!loading && stats && (
+        <ClientDashboardCharts data={stats} />
+      )}
+
       {/* Tableau dossiers récents */}
       <section className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-[#E2E8F0] px-6 py-4">
@@ -581,7 +598,20 @@ function StaffHome({ user }: { user: SafeUser }) {
         </div>
       )}
 
-      {ws && !isAgent && <PortfolioCharts statusMap={ws.statusMap} byCreditType={ws.byCreditType} />}
+      {ws && (
+        <StaffDashboardCharts
+          role={user.role}
+          data={{
+            statusMap: ws.roleStatusMap || ws.statusMap,
+            byCreditType: ws.byCreditType,
+            byRisk: ws.byRisk,
+            byMonth: ws.byMonth,
+            amountByMonth: ws.amountByMonth,
+            scoreDistribution: ws.scoreDistribution,
+            acceptanceRate: ws.acceptanceRate,
+          }}
+        />
+      )}
 
       {/* Contenu principal */}
       {ws && (
